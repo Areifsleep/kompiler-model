@@ -1,14 +1,20 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useNavigate } from 'react-router';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useNavigate } from "react-router";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 export default function Parsing() {
   const navigate = useNavigate();
-  const [jsonInput, setJsonInput] = useState('');
+  const [jsonInput, setJsonInput] = useState("");
   const [errors, setErrors] = useState([]);
   const [isValid, setIsValid] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
@@ -21,14 +27,14 @@ export default function Parsing() {
     try {
       // Validasi JSON
       const parsed = JSON.parse(jsonInput);
-      
+
       // Validasi struktur dasar (contoh validasi)
       const validationErrors = [];
-      
+
       if (!parsed.classes || !Array.isArray(parsed.classes)) {
         validationErrors.push('Property "classes" harus berupa array');
       }
-      
+
       if (!parsed.relationships || !Array.isArray(parsed.relationships)) {
         validationErrors.push('Property "relationships" harus berupa array');
       }
@@ -39,7 +45,7 @@ export default function Parsing() {
       } else {
         setIsValid(true);
         // Simpan parsed data ke localStorage atau state management
-        localStorage.setItem('parsedModel', JSON.stringify(parsed));
+        localStorage.setItem("parsedModel", JSON.stringify(parsed));
       }
     } catch (error) {
       setErrors([`JSON tidak valid: ${error.message}`]);
@@ -50,7 +56,7 @@ export default function Parsing() {
   };
 
   const handleContinue = () => {
-    navigate('/visualization');
+    navigate("/visualization");
   };
 
   const exampleJSON = `{
@@ -91,9 +97,7 @@ export default function Parsing() {
           <Card>
             <CardHeader>
               <CardTitle>Input JSON Model</CardTitle>
-              <CardDescription>
-                Paste JSON model Anda di sini
-              </CardDescription>
+              <CardDescription>Paste JSON model Anda di sini</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <Textarea
@@ -102,13 +106,16 @@ export default function Parsing() {
                 placeholder="Masukkan JSON model..."
                 className="min-h-[400px] font-mono text-sm"
               />
-              
+
               <div className="flex gap-2">
-                <Button onClick={handleParse} disabled={!jsonInput || isParsing}>
-                  {isParsing ? 'Parsing...' : 'Parse & Validasi'}
+                <Button
+                  onClick={handleParse}
+                  disabled={!jsonInput || isParsing}
+                >
+                  {isParsing ? "Parsing..." : "Parse & Validasi"}
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setJsonInput(exampleJSON)}
                 >
                   Load Example
@@ -132,7 +139,9 @@ export default function Parsing() {
                     <div className="font-semibold mb-2">Validation Errors:</div>
                     <ul className="list-disc list-inside space-y-1">
                       {errors.map((error, index) => (
-                        <li key={index} className="text-sm">{error}</li>
+                        <li key={index} className="text-sm">
+                          {error}
+                        </li>
                       ))}
                     </ul>
                   </AlertDescription>
@@ -145,10 +154,12 @@ export default function Parsing() {
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                     <AlertDescription className="text-green-800 dark:text-green-200">
                       <div className="font-semibold mb-1">JSON Valid!</div>
-                      <p className="text-sm">Model berhasil diparse dan siap untuk divisualisasikan.</p>
+                      <p className="text-sm">
+                        Model berhasil diparse dan siap untuk divisualisasikan.
+                      </p>
                     </AlertDescription>
                   </Alert>
-                  
+
                   <Button onClick={handleContinue} className="w-full">
                     Lanjut ke Visualisasi →
                   </Button>
@@ -159,9 +170,11 @@ export default function Parsing() {
                 <div className="text-sm text-muted-foreground">
                   <p className="mb-4">Belum ada data yang diparse.</p>
                   <div className="space-y-2">
-                    <p className="font-semibold">Format JSON yang diharapkan:</p>
+                    <p className="font-semibold">
+                      Format JSON yang diharapkan:
+                    </p>
                     <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
-{`{
+                      {`{
   "classes": [...],
   "relationships": [...]
 }`}

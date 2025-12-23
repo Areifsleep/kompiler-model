@@ -1,10 +1,16 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useNavigate } from 'react-router';
-import { AlertCircle } from 'lucide-react';
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useNavigate } from "react-router";
+import { AlertCircle } from "lucide-react";
 
 export default function Visualization() {
   const navigate = useNavigate();
@@ -12,18 +18,18 @@ export default function Visualization() {
 
   useEffect(() => {
     // Load parsed data dari localStorage
-    const stored = localStorage.getItem('parsedModel');
+    const stored = localStorage.getItem("parsedModel");
     if (stored) {
       try {
         setModelData(JSON.parse(stored));
       } catch (error) {
-        console.error('Error loading model data:', error);
+        console.error("Error loading model data:", error);
       }
     }
   }, []);
 
   const handleContinue = () => {
-    navigate('/translation');
+    navigate("/translation");
   };
 
   if (!modelData) {
@@ -34,8 +40,14 @@ export default function Visualization() {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               <div className="font-semibold mb-2">Tidak ada data model</div>
-              <p className="text-sm mb-4">Silakan parse JSON model terlebih dahulu.</p>
-              <Button variant="outline" size="sm" onClick={() => navigate('/parsing')}>
+              <p className="text-sm mb-4">
+                Silakan parse JSON model terlebih dahulu.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/parsing")}
+              >
                 Kembali ke Parsing
               </Button>
             </AlertDescription>
@@ -73,23 +85,31 @@ export default function Visualization() {
                   <CardContent className="space-y-4">
                     {cls.attributes && cls.attributes.length > 0 && (
                       <div>
-                        <h4 className="font-semibold mb-2 text-sm">Attributes:</h4>
+                        <h4 className="font-semibold mb-2 text-sm">
+                          Attributes:
+                        </h4>
                         <ul className="space-y-1">
                           {cls.attributes.map((attr, i) => (
-                            <li key={i} className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                            <li
+                              key={i}
+                              className="text-sm font-mono bg-muted px-2 py-1 rounded"
+                            >
                               {attr.name}: {attr.type}
                             </li>
                           ))}
                         </ul>
                       </div>
                     )}
-                    
+
                     {cls.methods && cls.methods.length > 0 && (
                       <div>
                         <h4 className="font-semibold mb-2 text-sm">Methods:</h4>
                         <ul className="space-y-1">
                           {cls.methods.map((method, i) => (
-                            <li key={i} className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                            <li
+                              key={i}
+                              className="text-sm font-mono bg-muted px-2 py-1 rounded"
+                            >
                               {method.name}(): {method.returnType}
                             </li>
                           ))}
@@ -111,11 +131,12 @@ export default function Visualization() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {modelData.relationships && modelData.relationships.length > 0 ? (
+                {modelData.relationships &&
+                modelData.relationships.length > 0 ? (
                   <div className="space-y-2">
                     {modelData.relationships.map((rel, index) => (
-                      <div 
-                        key={index} 
+                      <div
+                        key={index}
                         className="flex items-center gap-4 p-3 border rounded-lg"
                       >
                         <span className="font-semibold">{rel.from}</span>
@@ -157,12 +178,10 @@ export default function Visualization() {
         </Tabs>
 
         <div className="flex justify-between">
-          <Button variant="outline" onClick={() => navigate('/parsing')}>
+          <Button variant="outline" onClick={() => navigate("/parsing")}>
             ← Kembali ke Parsing
           </Button>
-          <Button onClick={handleContinue}>
-            Lanjut ke Translasi →
-          </Button>
+          <Button onClick={handleContinue}>Lanjut ke Translasi →</Button>
         </div>
       </div>
     </div>

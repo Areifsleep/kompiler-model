@@ -1,6 +1,12 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -16,7 +22,10 @@ export default function Home() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/parsing')}>
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate("/parsing")}
+          >
             <CardHeader>
               <CardTitle>1. Parsing</CardTitle>
               <CardDescription>Input dan validasi JSON model</CardDescription>
@@ -28,7 +37,10 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/visualization')}>
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate("/visualization")}
+          >
             <CardHeader>
               <CardTitle>2. Visualisasi</CardTitle>
               <CardDescription>Diagram class dan relasi</CardDescription>
@@ -40,7 +52,10 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/translation')}>
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate("/translation")}
+          >
             <CardHeader>
               <CardTitle>3. Translasi</CardTitle>
               <CardDescription>Generate kode program</CardDescription>
@@ -68,7 +83,7 @@ export default function Home() {
         </Card>
 
         <div className="text-center mt-8">
-          <Button size="lg" onClick={() => navigate('/parsing')}>
+          <Button size="lg" onClick={() => navigate("/parsing")}>
             Mulai Parsing
           </Button>
         </div>
