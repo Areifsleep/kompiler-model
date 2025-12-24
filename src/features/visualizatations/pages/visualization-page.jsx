@@ -1,26 +1,335 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router";
 import { AlertCircle } from "lucide-react";
+import ReactFlow, { MiniMap, Controls, Background, useNodesState, useEdgesState, MarkerType, Handle, Position } from "reactflow";
+import "reactflow/dist/style.css";
+
+// Custom Node Component for UML Class
+const ClassNode = ({ data }) => {
+  return (
+    <div
+      style={{
+        background: data.backgroundColor || "#ffffff",
+        border: `2px solid ${data.borderColor || "#3b82f6"}`,
+        borderRadius: "6px",
+        minWidth: "250px",
+        fontSize: "12px",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+      }}
+    >
+      <Handle
+        type="target"
+        position={Position.Top}
+        style={{ background: "#555" }}
+      />
+
+      {/* Class Header */}
+      <div
+        style={{
+          padding: "10px 12px",
+          fontWeight: "bold",
+          fontSize: "14px",
+          borderBottom: "2px solid " + (data.borderColor || "#3b82f6"),
+          textAlign: "center",
+          background: data.headerBackground || "#f8fafc",
+        }}
+      >
+        {data.className}
+        <div style={{ fontSize: "11px", fontWeight: "normal", color: "#64748b", marginTop: "2px" }}>({data.keyLetter})</div>
+      </div>
+
+      {/* Attributes Section */}
+      <div
+        style={{
+          padding: "8px 12px",
+          background: "#ffffff",
+        }}
+      >
+        {data.attributes && data.attributes.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            {data.attributes.map((attr, i) => (
+              <div
+                key={i}
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "11px",
+                  padding: "3px 6px",
+                  background: "#f8fafc",
+                  borderRadius: "3px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span>{attr.name}</span>
+                <span style={{ color: "#64748b", fontSize: "10px" }}>{attr.type}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ color: "#94a3b8", fontSize: "10px", fontStyle: "italic" }}>No attributes</div>
+        )}
+      </div>
+
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        style={{ background: "#555" }}
+      />
+    </div>
+  );
+};
+
+const nodeTypes = {
+  classNode: ClassNode,
+};
 
 export default function VisualizationPage() {
   const navigate = useNavigate();
   const [modelData, setModelData] = useState(null);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  const buildDiagram = useCallback(
+    (model) => {
+      if (!model?.system_model?.subsystems?.[0]) return;
+
+      const subsystem = model.system_model.subsystems[0];
+      const classes = subsystem.classes || [];
+      const relationships = subsystem.relationships || [];
+
+      console.log("Building diagram with:", { classes, relationships });
+
+      const newNodes = [];
+      const newEdges = [];
+      let yOffset = 0;
+      const verticalGap = 200;
+      const horizontalGap = 350;
+
+      // Find supertype relationships
+      const subtypeRels = relationships.filter((r) => r.type === "Subtype");
+      const supertypeKeys = subtypeRels.map((r) => r.superclass.key_letter);
+      const subtypeKeys = subtypeRels.flatMap((r) => r.subclasses.map((s) => s.key_letter));
+
+      // Separate classes by role
+      const superclasses = classes.filter((c) => supertypeKeys.includes(c.key_letter));
+      const subclasses = classes.filter((c) => subtypeKeys.includes(c.key_letter));
+      const associationClasses = classes.filter((c) => c.type === "Association");
+      const regularClasses = classes.filter(
+        (c) => !supertypeKeys.includes(c.key_letter) && !subtypeKeys.includes(c.key_letter) && c.type !== "Association"
+      );
+
+      // Render superclasses first (top level)
+      superclasses.forEach((cls, index) => {
+        const attributes = cls.attributes.map((attr) => {
+          return {
+            name: attr.name,
+            type: attr.type,
+          };
+        });
+
+        newNodes.push({
+          id: cls.key_letter,
+          type: "classNode",
+          position: { x: index * horizontalGap, y: yOffset },
+          data: {
+            className: cls.name,
+            keyLetter: cls.key_letter,
+            attributes: attributes,
+            backgroundColor: "#ffffff",
+            borderColor: "#3b82f6",
+            headerBackground: "#dbeafe",
+          },
+        });
+      });
+
+      yOffset += verticalGap;
+
+      // Render subclasses
+      subclasses.forEach((cls, index) => {
+        const attributes = cls.attributes.map((attr) => {
+          return {
+            name: attr.name,
+            type: attr.type,
+          };
+        });
+
+        newNodes.push({
+          id: cls.key_letter,
+          type: "classNode",
+          position: { x: index * horizontalGap, y: yOffset },
+          data: {
+            className: cls.name,
+            keyLetter: cls.key_letter,
+            attributes: attributes,
+            backgroundColor: "#ffffff",
+            borderColor: "#10b981",
+            headerBackground: "#d1fae5",
+          },
+        });
+      });
+
+      yOffset += verticalGap;
+
+      // Render regular classes
+      regularClasses.forEach((cls, index) => {
+        const attributes = cls.attributes.map((attr) => {
+          return {
+            name: attr.name,
+            type: attr.type,
+          };
+        });
+
+        newNodes.push({
+          id: cls.key_letter,
+          type: "classNode",
+          position: { x: index * horizontalGap, y: yOffset },
+          data: {
+            className: cls.name,
+            keyLetter: cls.key_letter,
+            attributes: attributes,
+            backgroundColor: "#ffffff",
+            borderColor: "#6b7280",
+            headerBackground: "#f1f5f9",
+          },
+        });
+      });
+
+      yOffset += verticalGap;
+
+      // Render association classes
+      associationClasses.forEach((cls, index) => {
+        const attributes = cls.attributes.map((attr) => {
+          return {
+            name: attr.name,
+            type: attr.type,
+          };
+        });
+
+        newNodes.push({
+          id: cls.key_letter,
+          type: "classNode",
+          position: { x: index * horizontalGap + horizontalGap / 2, y: yOffset },
+          data: {
+            className: cls.name,
+            keyLetter: cls.key_letter,
+            attributes: attributes,
+            backgroundColor: "#fef3c7",
+            borderColor: "#f59e0b",
+            headerBackground: "#fde68a",
+          },
+        });
+      });
+
+      // Build edges
+      relationships.forEach((rel) => {
+        if (rel.type === "Subtype") {
+          rel.subclasses.forEach((sub) => {
+            newEdges.push({
+              id: `${rel.superclass.key_letter}-${sub.key_letter}`,
+              source: rel.superclass.key_letter,
+              target: sub.key_letter,
+              label: rel.label,
+              type: "default",
+              animated: false,
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                width: 25,
+                height: 25,
+                color: "#3b82f6",
+              },
+              style: {
+                stroke: "#3b82f6",
+                strokeWidth: 3,
+              },
+              labelStyle: {
+                fill: "#1e40af",
+                fontWeight: 700,
+                fontSize: "13px",
+              },
+              labelBgStyle: {
+                fill: "#ffffff",
+                fillOpacity: 0.95,
+              },
+              labelBgPadding: [8, 6],
+              labelBgBorderRadius: 4,
+            });
+          });
+        } else if (rel.type === "Associative") {
+          const oneSide = rel.one_side;
+          const otherSide = rel.other_side;
+          const assocClass = rel.association_class;
+
+          // Edge from one side to association class
+          newEdges.push({
+            id: `${oneSide.key_letter}-${assocClass.key_letter}`,
+            source: oneSide.key_letter,
+            target: assocClass.key_letter,
+            type: "default",
+            label: `${rel.label}: "${oneSide.phrase}"`,
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              width: 20,
+              height: 20,
+              color: "#f59e0b",
+            },
+            style: {
+              stroke: "#f59e0b",
+              strokeWidth: 3,
+            },
+            labelStyle: {
+              fill: "#92400e",
+              fontWeight: 700,
+              fontSize: "12px",
+            },
+            labelBgStyle: {
+              fill: "#ffffff",
+              fillOpacity: 0.95,
+            },
+            labelBgPadding: [8, 10],
+            labelBgBorderRadius: 4,
+          });
+
+          // Edge from association class to other side
+          newEdges.push({
+            id: `${assocClass.key_letter}-${otherSide.key_letter}`,
+            source: assocClass.key_letter,
+            target: otherSide.key_letter,
+            type: "default",
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              width: 20,
+              height: 20,
+              color: "#f59e0b",
+            },
+            style: {
+              stroke: "#f59e0b",
+              strokeWidth: 3,
+            },
+          });
+        }
+      });
+
+      setNodes(newNodes);
+      setEdges(newEdges);
+    },
+    [setNodes, setEdges]
+  );
 
   useEffect(() => {
-    // Load parsed data dari localStorage
     const stored = localStorage.getItem("parsedModel");
     if (stored) {
       try {
-        setModelData(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        setModelData(parsed);
+        buildDiagram(parsed);
       } catch (error) {
         console.error("Error loading model data:", error);
       }
     }
-  }, []);
+  }, [buildDiagram]);
 
   const handleContinue = () => {
     navigate("/translation");
@@ -50,131 +359,59 @@ export default function VisualizationPage() {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Model Visualization</h1>
-          <p className="text-muted-foreground">Visualisasi class diagram dan relationship model</p>
-        </div>
+    <div
+      className="container mx-auto p-6"
+      style={{ height: "100vh", display: "flex", flexDirection: "column" }}
+    >
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">Model Visualization</h1>
+        <p className="text-muted-foreground">Visualisasi class diagram dan relationship model</p>
+      </div>
 
-        <Tabs
-          defaultValue="classes"
-          className="w-full"
+      <div
+        style={{
+          flex: 1,
+          border: "1px solid #e5e7eb",
+          borderRadius: "8px",
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          nodeTypes={nodeTypes}
+          fitView
+          proOptions={{
+            hideAttribution: true,
+          }}
+          minZoom={0.1}
+          maxZoom={2}
+          defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
         >
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="classes">Classes</TabsTrigger>
-            <TabsTrigger value="relationships">Relationships</TabsTrigger>
-            <TabsTrigger value="diagram">Diagram</TabsTrigger>
-          </TabsList>
+          <Controls
+            position="top-right"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px",
+              margin: "10px",
+            }}
+          />
+          <Background />
+        </ReactFlow>
+      </div>
 
-          <TabsContent
-            value="classes"
-            className="space-y-4"
-          >
-            <div className="grid md:grid-cols-2 gap-4">
-              {modelData.classes?.map((cls, index) => (
-                <Card key={index}>
-                  <CardHeader>
-                    <CardTitle className="text-xl">{cls.name}</CardTitle>
-                    <CardDescription>Class Definition</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {cls.attributes && cls.attributes.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold mb-2 text-sm">Attributes:</h4>
-                        <ul className="space-y-1">
-                          {cls.attributes.map((attr, i) => (
-                            <li
-                              key={i}
-                              className="text-sm font-mono bg-muted px-2 py-1 rounded"
-                            >
-                              {attr.name}: {attr.type}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {cls.methods && cls.methods.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold mb-2 text-sm">Methods:</h4>
-                        <ul className="space-y-1">
-                          {cls.methods.map((method, i) => (
-                            <li
-                              key={i}
-                              className="text-sm font-mono bg-muted px-2 py-1 rounded"
-                            >
-                              {method.name}(): {method.returnType}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent
-            value="relationships"
-            className="space-y-4"
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle>Relationships</CardTitle>
-                <CardDescription>Relasi antar class dalam model</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {modelData.relationships && modelData.relationships.length > 0 ? (
-                  <div className="space-y-2">
-                    {modelData.relationships.map((rel, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-4 p-3 border rounded-lg"
-                      >
-                        <span className="font-semibold">{rel.from}</span>
-                        <span className="text-muted-foreground">—</span>
-                        <span className="px-3 py-1 bg-primary/10 text-primary rounded text-sm font-medium">{rel.type}</span>
-                        <span className="text-muted-foreground">→</span>
-                        <span className="font-semibold">{rel.to}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Tidak ada relationship yang didefinisikan.</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent
-            value="diagram"
-            className="space-y-4"
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle>Class Diagram</CardTitle>
-                <CardDescription>Visualisasi diagram (Coming Soon)</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-muted rounded-lg h-96 flex items-center justify-center">
-                  <p className="text-muted-foreground">Diagram visualization akan ditambahkan di sini</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        <div className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={() => navigate("/parsing")}
-          >
-            ← Kembali ke Parsing
-          </Button>
-          <Button onClick={handleContinue}>Lanjut ke Translasi →</Button>
-        </div>
+      <div className="flex justify-between mt-6">
+        <Button
+          variant="outline"
+          onClick={() => navigate("/parsing")}
+        >
+          ← Kembali ke Parsing
+        </Button>
+        <Button onClick={handleContinue}>Lanjut ke Translasi →</Button>
       </div>
     </div>
   );
