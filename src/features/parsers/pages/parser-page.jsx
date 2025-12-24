@@ -1,10 +1,36 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
+import CodeMirror from "@uiw/react-codemirror";
+import { json } from "@codemirror/lang-json";
+import { useTheme } from "@/components/theme-provider";
+
+const exampleJSON = `{
+  "classes": [
+    {
+      "name": "User",
+      "attributes": [
+        { "name": "id", "type": "string" },
+        { "name": "name", "type": "string" },
+        { "name": "email", "type": "string" }
+      ],
+      "methods": [
+        { "name": "login", "returnType": "boolean" },
+        { "name": "logout", "returnType": "void" }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "from": "User",
+      "to": "Order",
+      "type": "hasMany"
+    }
+  ]
+}`;
 
 export default function ParsingPage() {
   const navigate = useNavigate();
@@ -12,6 +38,38 @@ export default function ParsingPage() {
   const [errors, setErrors] = useState([]);
   const [isValid, setIsValid] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleFileLoad = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validasi ekstensi file
+    if (!file.name.endsWith(".json")) {
+      setErrors(["File harus berformat .json"]);
+      setIsValid(false);
+      return;
+    }
+
+    // Baca file
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result;
+      if (typeof content === "string") {
+        setJsonInput(content);
+        setErrors([]);
+        setIsValid(false);
+      }
+    };
+    reader.onerror = () => {
+      setErrors(["Gagal membaca file"]);
+      setIsValid(false);
+    };
+    reader.readAsText(file);
+
+    // Reset input agar file yang sama bisa dipilih lagi
+    event.target.value = "";
+  };
 
   const handleParse = () => {
     setIsParsing(true);
@@ -53,29 +111,15 @@ export default function ParsingPage() {
     navigate("/visualization");
   };
 
-  const exampleJSON = `{
-  "classes": [
-    {
-      "name": "User",
-      "attributes": [
-        { "name": "id", "type": "string" },
-        { "name": "name", "type": "string" },
-        { "name": "email", "type": "string" }
-      ],
-      "methods": [
-        { "name": "login", "returnType": "boolean" },
-        { "name": "logout", "returnType": "void" }
-      ]
-    }
-  ],
-  "relationships": [
-    {
-      "from": "User",
-      "to": "Order",
-      "type": "hasMany"
-    }
-  ]
-}`;
+  const { theme } = useTheme();
+
+  const editorTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? theme === "system"
+      ? "dark"
+      : theme
+    : theme === "system"
+    ? "light"
+    : theme;
 
   return (
     <div className="container mx-auto p-6">
@@ -85,18 +129,32 @@ export default function ParsingPage() {
           <p className="text-muted-foreground">Input model JSON Anda dan validasi strukturnya</p>
         </div>
 
-        <div className="grid lg:grid-cols-1 gap-6">
+        <div className="grid xl:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Input JSON Model</CardTitle>
               <CardDescription>Paste JSON model Anda di sini</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Textarea
+              <CodeMirror
                 value={jsonInput}
-                onChange={(e) => setJsonInput(e.target.value)}
+                height="400px"
+                extensions={[json()]}
+                onChange={(value) => setJsonInput(value)}
                 placeholder="Masukkan JSON model..."
-                className="min-h-100 font-mono text-sm"
+                theme={editorTheme}
+                basicSetup={{
+                  lineNumbers: true,
+                  highlightActiveLineGutter: true,
+                  highlightSpecialChars: true,
+                  foldGutter: true,
+                  bracketMatching: true,
+                  closeBrackets: true,
+                  autocompletion: true,
+                  highlightActiveLine: true,
+                  highlightSelectionMatches: true,
+                }}
+                className="border rounded-md overflow-hidden"
               />
 
               <div className="flex gap-2">
@@ -105,6 +163,19 @@ export default function ParsingPage() {
                   disabled={!jsonInput || isParsing}
                 >
                   {isParsing ? "Parsing..." : "Parse & Validasi"}
+                </Button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept=".json"
+                  onChange={handleFileLoad}
+                  className="hidden"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Load File
                 </Button>
                 <Button
                   variant="outline"

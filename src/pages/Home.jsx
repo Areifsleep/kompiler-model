@@ -112,7 +112,6 @@ export default function Home() {
 
         <div className="border" />
 
-        {/* Team Profile Section */}
         <div className="mt-12 space-y-6">
           <div className="text-center space-y-2">
             <div className="inline-block px-4 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-medium mb-2">Super Team</div>
