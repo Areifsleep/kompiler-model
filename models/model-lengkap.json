@@ -204,24 +204,6 @@
               "cond": "Optional"
             }
           }
-        ],
-        "external_entities": [
-          {
-            "key_letter": "LOG",
-            "name": "Logging Service",
-            "bridges": [
-              {
-                "name": "LogInfo",
-                "parameters": [{ "name": "message", "type": "string" }],
-                "return_type": "void"
-              },
-              {
-                "name": "LogError",
-                "parameters": [{ "name": "message", "type": "string" }],
-                "return_type": "void"
-              }
-            ]
-          }
         ]
       }
     ]
