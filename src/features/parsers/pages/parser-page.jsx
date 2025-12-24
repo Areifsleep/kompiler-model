@@ -91,7 +91,7 @@ export default function ParsingPage() {
       }, 100);
     } catch (error) {
       console.error("Parse Error:", error);
-      toast.error("Format JSON tidak valid, periksa kembali input Anda.");
+      toast.error(`Format JSON tidak valid dengan detail error: ${error.message}`);
       setIsValid(false);
     } finally {
       setIsParsing(false);

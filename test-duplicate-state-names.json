@@ -1,0 +1,46 @@
+{
+  "system_model": {
+    "system_name": "Test Duplicate State Names",
+    "version": "1.0",
+    "subsystems": [
+      {
+        "name": "Test Subsystem",
+        "prefix": "TST",
+        "classes": [
+          {
+            "name": "Mahasiswa",
+            "key_letter": "MHS",
+            "class_number": 1,
+            "attributes": [
+              { "name": "MHS_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "Current_State", "type": "state<MHS>", "is_identifier": false }
+            ],
+            "state_model": {
+              "lifecycle_type": "Instance",
+              "initial_state": "Aktif",
+              "states": [
+                {
+                  "name": "Aktif",
+                  "state_number": 1,
+                  "action_oal": "// State Aktif\nself.Current_State = \"Aktif\";"
+                },
+                {
+                  "name": "Aktif",
+                  "state_number": 55,
+                  "action_oal": "// State Aktif\nself.Current_State = \"Aktif\";"
+                },
+                {
+                  "name": "Cuti",
+                  "state_number": 3,
+                  "action_oal": "self.Current_State = \"Cuti\";"
+                }
+              ],
+              "events": [{ "label": "MHS1", "meaning": "Ajukan Cuti", "parameters": [] }],
+              "transitions": [{ "from_state": "Aktif", "event": "MHS1", "to_state": "Cuti" }]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

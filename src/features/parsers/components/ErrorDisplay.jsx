@@ -94,7 +94,7 @@ export function ErrorDisplay({ errors }) {
                   )}
                 </AlertTitle>
                 <AlertDescription className="text-sm font-medium text-foreground/90 mb-2">
-                  {error.message}, please {error.suggestion}
+                  {error.message}, please {error.suggestion.toLowerCase()}.
                 </AlertDescription>
                 {/* Context */}
                 {error.context && (

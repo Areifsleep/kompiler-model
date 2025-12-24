@@ -24,8 +24,11 @@ export class SemanticValidator {
         const smPath = `$.system_model.subsystems[${subsysIdx}].classes[${clsIdx}].state_model`;
 
         this.validateInitialState(cls.state_model, smPath);
+        this.validateEventLabels(cls.state_model, cls.key_letter, smPath);
+        this.validateEventDataConsistency(cls.state_model, smPath);
         this.validateOALInStates(cls.state_model, smPath);
         this.validateTransitions(cls.state_model, smPath);
+        this.validateCurrentStateUpdate(cls.state_model, smPath);
       });
     });
   }
@@ -44,6 +47,101 @@ export class SemanticValidator {
         );
       }
     }
+  }
+
+  // Rule 26: Event label format KLi (where KL is KeyLetter, i is integer)
+  // Rule 27: Event format validation
+  validateEventLabels(stateModel, classKeyLetter, smPath) {
+    if (!stateModel.events || !Array.isArray(stateModel.events)) return;
+
+    const eventPattern = new RegExp(`^${classKeyLetter}\\d+$`);
+
+    stateModel.events.forEach((event, eventIdx) => {
+      const eventPath = `${smPath}.events[${eventIdx}]`;
+      const label = event.label || event.name;
+
+      // Rule 26: Validate event label format
+      if (label && !eventPattern.test(label)) {
+        this.errorManager.addError(
+          `Event label '${label}' doesn't follow format '${classKeyLetter}<number>' (e.g., ${classKeyLetter}1, ${classKeyLetter}2)`,
+          `${eventPath}.label`,
+          `Use format: ${classKeyLetter}1, ${classKeyLetter}2, ${classKeyLetter}3, etc.`,
+          "error",
+          3
+        );
+      }
+
+      // Rule 27: Validate event has meaning/description
+      if (!event.meaning && !event.description) {
+        this.errorManager.addError(
+          `Event '${label}' missing 'meaning' or 'description'`,
+          eventPath,
+          "Add 'meaning' field to describe event purpose",
+          "warning",
+          3
+        );
+      }
+
+      // Validate parameters structure
+      if (event.parameters && !Array.isArray(event.parameters)) {
+        this.errorManager.addError(
+          `Event '${label}' parameters must be an array`,
+          `${eventPath}.parameters`,
+          "Change to array format: [{name: 'param1', type: 'string'}]",
+          "error",
+          3
+        );
+      }
+    });
+  }
+
+  // Rule 29: All events causing transition to same state must have same event data
+  validateEventDataConsistency(stateModel, smPath) {
+    if (!stateModel.transitions || !stateModel.events) return;
+
+    // Group transitions by target state
+    const stateTransitions = new Map();
+    stateModel.transitions.forEach((trans, idx) => {
+      if (trans.to_state) {
+        if (!stateTransitions.has(trans.to_state)) {
+          stateTransitions.set(trans.to_state, []);
+        }
+        stateTransitions.get(trans.to_state).push({ ...trans, idx });
+      }
+    });
+
+    // Check each state's incoming events have consistent parameters
+    stateTransitions.forEach((transitions, toState) => {
+      if (transitions.length < 2) return; // No need to check if only one transition
+
+      const eventParamSignatures = new Map();
+
+      transitions.forEach(({ event: eventLabel, idx }) => {
+        const event = stateModel.events.find((e) => (e.label || e.name) === eventLabel);
+        if (!event) return;
+
+        const paramSignature = JSON.stringify(
+          (event.parameters || []).map((p) => ({ name: p.name, type: p.type })).sort((a, b) => a.name.localeCompare(b.name))
+        );
+
+        if (eventParamSignatures.size === 0) {
+          eventParamSignatures.set(eventLabel, paramSignature);
+        } else {
+          const firstEntry = Array.from(eventParamSignatures.entries())[0];
+          const [firstEvent, firstSignature] = firstEntry;
+
+          if (paramSignature !== firstSignature) {
+            this.errorManager.addError(
+              `Event '${eventLabel}' parameters differ from '${firstEvent}' but both transition to state '${toState}'`,
+              `${smPath}.transitions[${idx}]`,
+              "All events transitioning to the same state must have identical parameter structure",
+              "error",
+              3
+            );
+          }
+        }
+      });
+    });
   }
 
   validateOALInStates(stateModel, smPath) {
@@ -98,6 +196,38 @@ export class SemanticValidator {
         }
       });
     }
+  }
+
+  // Rule 38: Actions must update Current_State (except deletion states)
+  validateCurrentStateUpdate(stateModel, smPath) {
+    if (!stateModel.states || !Array.isArray(stateModel.states)) return;
+
+    stateModel.states.forEach((state, stateIdx) => {
+      const statePath = `${smPath}.states[${stateIdx}]`;
+
+      // Skip if state looks like a deletion state
+      if (
+        state.name.toLowerCase().includes("delete") ||
+        state.name.toLowerCase().includes("removed") ||
+        state.action_oal?.toLowerCase().includes("delete")
+      ) {
+        return;
+      }
+
+      // Check if action_oal updates Current_State
+      if (state.action_oal) {
+        const hasCurrentStateUpdate = /self\.Current_State\s*=/.test(state.action_oal);
+        if (!hasCurrentStateUpdate) {
+          this.errorManager.addError(
+            `State '${state.name}' action doesn't update Current_State`,
+            `${statePath}.action_oal`,
+            `Add: self.Current_State = "${state.name}";`,
+            "warning",
+            3
+          );
+        }
+      }
+    });
   }
 
   /**
