@@ -1,11 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -13,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router";
 import { AlertCircle, Download, Copy } from "lucide-react";
 
-export default function Translation() {
+export default function TranslationPage() {
   const navigate = useNavigate();
   const [modelData, setModelData] = useState(null);
   const [selectedLanguage, setSelectedLanguage] = useState("java");
@@ -78,8 +72,7 @@ export default function Translation() {
         if (cls.attributes) {
           cls.attributes.forEach((attr) => {
             const javaType = mapTypeToJava(attr.type);
-            const capitalizedName =
-              attr.name.charAt(0).toUpperCase() + attr.name.slice(1);
+            const capitalizedName = attr.name.charAt(0).toUpperCase() + attr.name.slice(1);
 
             code += `    public ${javaType} get${capitalizedName}() {\n`;
             code += `        return ${attr.name};\n`;
@@ -265,9 +258,7 @@ export default function Translation() {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               <div className="font-semibold mb-2">Tidak ada data model</div>
-              <p className="text-sm mb-4">
-                Silakan parse JSON model terlebih dahulu.
-              </p>
+              <p className="text-sm mb-4">Silakan parse JSON model terlebih dahulu.</p>
               <Button
                 variant="outline"
                 size="sm"
@@ -287,33 +278,37 @@ export default function Translation() {
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2">Code Translation</h1>
-          <p className="text-muted-foreground">
-            Translasi model ke berbagai bahasa pemrograman
-          </p>
+          <p className="text-muted-foreground">Translasi model ke berbagai bahasa pemrograman</p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle>Pilih Bahasa Target</CardTitle>
-            <CardDescription>
-              Kode akan di-generate secara otomatis
-            </CardDescription>
+            <CardDescription>Kode akan di-generate secara otomatis</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={selectedLanguage} onValueChange={handleLanguageChange}>
+            <Tabs
+              value={selectedLanguage}
+              onValueChange={handleLanguageChange}
+            >
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="java">Java</TabsTrigger>
                 <TabsTrigger value="python">Python</TabsTrigger>
                 <TabsTrigger value="typescript">TypeScript</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="java" className="space-y-4">
+              <TabsContent
+                value="java"
+                className="space-y-4"
+              >
                 <div className="flex justify-between items-center">
-                  <p className="text-sm text-muted-foreground">
-                    Generated Java Code
-                  </p>
+                  <p className="text-sm text-muted-foreground">Generated Java Code</p>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={handleCopy}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCopy}
+                    >
                       <Copy className="h-4 w-4 mr-2" />
                       {copied ? "Copied!" : "Copy"}
                     </Button>
@@ -334,13 +329,18 @@ export default function Translation() {
                 />
               </TabsContent>
 
-              <TabsContent value="python" className="space-y-4">
+              <TabsContent
+                value="python"
+                className="space-y-4"
+              >
                 <div className="flex justify-between items-center">
-                  <p className="text-sm text-muted-foreground">
-                    Generated Python Code
-                  </p>
+                  <p className="text-sm text-muted-foreground">Generated Python Code</p>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={handleCopy}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCopy}
+                    >
                       <Copy className="h-4 w-4 mr-2" />
                       {copied ? "Copied!" : "Copy"}
                     </Button>
@@ -361,13 +361,18 @@ export default function Translation() {
                 />
               </TabsContent>
 
-              <TabsContent value="typescript" className="space-y-4">
+              <TabsContent
+                value="typescript"
+                className="space-y-4"
+              >
                 <div className="flex justify-between items-center">
-                  <p className="text-sm text-muted-foreground">
-                    Generated TypeScript Code
-                  </p>
+                  <p className="text-sm text-muted-foreground">Generated TypeScript Code</p>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={handleCopy}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCopy}
+                    >
                       <Copy className="h-4 w-4 mr-2" />
                       {copied ? "Copied!" : "Copy"}
                     </Button>
@@ -392,10 +397,16 @@ export default function Translation() {
         </Card>
 
         <div className="flex justify-between">
-          <Button variant="outline" onClick={() => navigate("/visualization")}>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/visualization")}
+          >
             ← Kembali ke Visualisasi
           </Button>
-          <Button variant="outline" onClick={() => navigate("/")}>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/")}
+          >
             Kembali ke Home
           </Button>
         </div>

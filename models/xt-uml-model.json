@@ -1,0 +1,147 @@
+{
+  "system_model": {
+    "system_name": "Sistem Informasi Akademik",
+    "version": "2.0.0-xtuml-strict",
+    "subsystems": [
+      {
+        "name": "Manajemen Akademik",
+        "prefix": "MCA",
+        "data_types": [
+          { "name": "unique_ID", "core_type": "unique_ID" },
+          { "name": "nama_orang", "core_type": "string" },
+          { "name": "kode_mk", "core_type": "string" },
+          { "name": "sks_type", "core_type": "integer" },
+          { "name": "tanggal", "core_type": "date" }
+        ],
+        "classes": [
+          {
+            "name": "Person",
+            "key_letter": "PRS",
+            "class_number": 1,
+            "attributes": [
+              { "name": "Person_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "Nama", "type": "nama_orang", "is_identifier": false },
+              { "name": "Email", "type": "string", "is_identifier": false }
+            ]
+          },
+          {
+            "name": "Mahasiswa",
+            "key_letter": "MHS",
+            "class_number": 2,
+            "attributes": [
+              { "name": "MHS_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "Person_ID", "type": "unique_ID", "is_identifier": false, "referential": "R1" },
+              { "name": "NIM", "type": "string", "is_identifier": true },
+              { "name": "Current_State", "type": "state<MHS>", "is_identifier": false }
+            ],
+            "state_model": {
+              "lifecycle_type": "Instance",
+              "initial_state": "Aktif",
+              "states": [
+                {
+                  "name": "Aktif",
+                  "state_number": 1,
+                  "action_oal": "// State Aktif\nself.Current_State = \"Aktif\";"
+                },
+                {
+                  "name": "Cuti",
+                  "state_number": 2,
+                  "action_oal": "// Entry Action State Cuti\n// param.alasan diterima dari event\nLOG::LogInfo(message:\"Mahasiswa cuti: \" + param.alasan);\nself.Current_State = \"Cuti\";"
+                },
+                {
+                  "name": "Lulus",
+                  "state_number": 3,
+                  "action_oal": "// Entry Action State Lulus\nLOG::LogInfo(message:\"Mahasiswa telah lulus.\");\nself.Current_State = \"Lulus\";"
+                }
+              ],
+              "events": [
+                { "label": "MHS1", "meaning": "Ajukan Cuti", "parameters": [{ "name": "alasan", "type": "string" }] },
+                { "label": "MHS2", "meaning": "Aktifkan Kembali", "parameters": [{ "name": "tanggalAktif", "type": "date" }] },
+                { "label": "MHS3", "meaning": "Dinyatakan Lulus", "parameters": [{ "name": "tanggalLulus", "type": "date" }] }
+              ],
+              "transitions": [
+                { "from_state": "Aktif", "event": "MHS1", "to_state": "Cuti" },
+                { "from_state": "Cuti", "event": "MHS2", "to_state": "Aktif" },
+                { "from_state": "Aktif", "event": "MHS3", "to_state": "Lulus" }
+              ]
+            }
+          },
+          {
+            "name": "Dosen",
+            "key_letter": "DSN",
+            "class_number": 3,
+            "attributes": [
+              { "name": "DSN_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "Person_ID", "type": "unique_ID", "is_identifier": false, "referential": "R1" },
+              { "name": "NIP", "type": "string", "is_identifier": true },
+              { "name": "Current_State", "type": "state<DSN>", "is_identifier": false }
+            ]
+          },
+          {
+            "name": "MataKuliah",
+            "key_letter": "MK",
+            "class_number": 4,
+            "attributes": [
+              { "name": "MK_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "KodeMK", "type": "kode_mk", "is_identifier": false },
+              { "name": "NamaMK", "type": "string", "is_identifier": false },
+              { "name": "SKS", "type": "sks_type", "is_identifier": false }
+            ]
+          },
+          {
+            "name": "KRS",
+            "key_letter": "KRS",
+            "class_number": 5,
+            "type": "Association",
+            "attributes": [
+              { "name": "MHS_ID", "type": "unique_ID", "is_identifier": true, "referential": "R2" },
+              { "name": "MK_ID", "type": "unique_ID", "is_identifier": true, "referential": "R2" },
+              { "name": "Semester", "type": "string", "is_identifier": false },
+              { "name": "Nilai", "type": "string", "is_identifier": false }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "label": "R1",
+            "type": "Subtype",
+            "description": "Person adalah supertype dari Mahasiswa dan Dosen",
+            "superclass": { "key_letter": "PRS" },
+            "subclasses": [{ "key_letter": "MHS" }, { "key_letter": "DSN" }]
+          },
+          {
+            "label": "R2",
+            "type": "Associative",
+            "description": "Mahasiswa mengambil Mata Kuliah (diformalkan oleh KRS)",
+            "one_side": {
+              "key_letter": "MHS",
+              "phrase": "mengambil",
+              "mult": "One",
+              "cond": "Mandatory"
+            },
+            "other_side": {
+              "key_letter": "MK",
+              "phrase": "diambil oleh",
+              "mult": "Many",
+              "cond": "Optional"
+            },
+            "association_class": { "key_letter": "KRS" }
+          }
+        ],
+        "external_entities": [
+          {
+            "key_letter": "LOG",
+            "name": "Logging Service",
+            "bridges": [
+              {
+                "name": "LogInfo",
+                "parameters": [{ "name": "message", "type": "string" }],
+                "return_type": "void"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

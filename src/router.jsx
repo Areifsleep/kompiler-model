@@ -1,9 +1,10 @@
 import { createBrowserRouter } from "react-router";
 import MainLayout from "@/layouts/MainLayout";
 import Home from "@/pages/Home";
-import Parsing from "@/pages/Parsing";
-import Visualization from "@/pages/Visualization";
-import Translation from "@/pages/Translation";
+
+import ParsingPage from "@/features/parsers/pages/parser-page";
+import TranslationPage from "@/features/translations/pages/translation-page";
+import VisualizationPage from "@/features/visualizatations/pages/visualization-page";
 
 export const router = createBrowserRouter([
   {
@@ -16,15 +17,15 @@ export const router = createBrowserRouter([
       },
       {
         path: "parsing",
-        element: <Parsing />,
+        element: <ParsingPage />,
       },
       {
         path: "visualization",
-        element: <Visualization />,
+        element: <VisualizationPage />,
       },
       {
         path: "translation",
-        element: <Translation />,
+        element: <TranslationPage />,
       },
     ],
   },

@@ -1,18 +1,12 @@
 import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 
-export default function Parsing() {
+export default function ParsingPage() {
   const navigate = useNavigate();
   const [jsonInput, setJsonInput] = useState("");
   const [errors, setErrors] = useState([]);
@@ -88,12 +82,10 @@ export default function Parsing() {
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2">JSON Parsing</h1>
-          <p className="text-muted-foreground">
-            Input model JSON Anda dan validasi strukturnya
-          </p>
+          <p className="text-muted-foreground">Input model JSON Anda dan validasi strukturnya</p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid lg:grid-cols-1 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Input JSON Model</CardTitle>
@@ -104,7 +96,7 @@ export default function Parsing() {
                 value={jsonInput}
                 onChange={(e) => setJsonInput(e.target.value)}
                 placeholder="Masukkan JSON model..."
-                className="min-h-[400px] font-mono text-sm"
+                className="min-h-100 font-mono text-sm"
               />
 
               <div className="flex gap-2">
@@ -127,9 +119,7 @@ export default function Parsing() {
           <Card>
             <CardHeader>
               <CardTitle>Hasil Validasi</CardTitle>
-              <CardDescription>
-                Status dan error dari proses parsing
-              </CardDescription>
+              <CardDescription>Status dan error dari proses parsing</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {errors.length > 0 && (
@@ -139,7 +129,10 @@ export default function Parsing() {
                     <div className="font-semibold mb-2">Validation Errors:</div>
                     <ul className="list-disc list-inside space-y-1">
                       {errors.map((error, index) => (
-                        <li key={index} className="text-sm">
+                        <li
+                          key={index}
+                          className="text-sm"
+                        >
                           {error}
                         </li>
                       ))}
@@ -154,13 +147,14 @@ export default function Parsing() {
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                     <AlertDescription className="text-green-800 dark:text-green-200">
                       <div className="font-semibold mb-1">JSON Valid!</div>
-                      <p className="text-sm">
-                        Model berhasil diparse dan siap untuk divisualisasikan.
-                      </p>
+                      <p className="text-sm">Model berhasil diparse dan siap untuk divisualisasikan.</p>
                     </AlertDescription>
                   </Alert>
 
-                  <Button onClick={handleContinue} className="w-full">
+                  <Button
+                    onClick={handleContinue}
+                    className="w-full"
+                  >
                     Lanjut ke Visualisasi →
                   </Button>
                 </>
@@ -170,9 +164,7 @@ export default function Parsing() {
                 <div className="text-sm text-muted-foreground">
                   <p className="mb-4">Belum ada data yang diparse.</p>
                   <div className="space-y-2">
-                    <p className="font-semibold">
-                      Format JSON yang diharapkan:
-                    </p>
+                    <p className="font-semibold">Format JSON yang diharapkan:</p>
                     <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
                       {`{
   "classes": [...],
