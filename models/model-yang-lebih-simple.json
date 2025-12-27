@@ -1,7 +1,7 @@
 {
   "system_model": {
     "system_name": "Sistem Informasi Akademik",
-    "version": "2.0.0-xtuml-strict",
+    "version": "2.1.0-xtuml-simplified-consistent",
     "subsystems": [
       {
         "name": "Manajemen Akademik",
@@ -35,34 +35,39 @@
               { "name": "Current_State", "type": "state<MHS>", "is_identifier": false }
             ],
             "state_model": {
-              "lifecycle_type": "Instance",
               "initial_state": "Aktif",
-              "states": [
-                {
-                  "name": "Aktif",
-                  "state_number": 1,
-                  "action_oal": "// State Aktif\nself.Current_State = \"Aktif\";"
-                },
-                {
-                  "name": "Cuti",
-                  "state_number": 2,
-                  "action_oal": "// Entry Action State Cuti\n// param.alasan diterima dari event\nLOG::LogInfo(message:\"Mahasiswa cuti: \" + param.alasan);\nself.Current_State = \"Cuti\";"
-                },
-                {
-                  "name": "Lulus",
-                  "state_number": 3,
-                  "action_oal": "// Entry Action State Lulus\nLOG::LogInfo(message:\"Mahasiswa telah lulus.\");\nself.Current_State = \"Lulus\";"
-                }
-              ],
-              "events": [
-                { "label": "MHS1", "meaning": "Ajukan Cuti", "parameters": [{ "name": "alasan", "type": "string" }] },
-                { "label": "MHS2", "meaning": "Aktifkan Kembali", "parameters": [{ "name": "tanggalAktif", "type": "date" }] },
-                { "label": "MHS3", "meaning": "Dinyatakan Lulus", "parameters": [{ "name": "tanggalLulus", "type": "date" }] }
-              ],
+              "states": [{ "name": "Aktif" }, { "name": "Cuti" }, { "name": "Lulus" }],
               "transitions": [
-                { "from_state": "Aktif", "event": "MHS1", "to_state": "Cuti" },
-                { "from_state": "Cuti", "event": "MHS2", "to_state": "Aktif" },
-                { "from_state": "Aktif", "event": "MHS3", "to_state": "Lulus" }
+                {
+                  "event": "ambilCuti",
+                  "from_state": "Aktif",
+                  "to_state": "Cuti",
+                  "parameters": [{ "name": "alasan", "type": "string" }],
+                  "steps": [
+                    { "type": "log", "message": "Mahasiswa ${self.NIM} mengajukan cuti dengan alasan: ${alasan}." },
+                    { "type": "update", "attribute": "Current_State", "value": "Cuti" }
+                  ]
+                },
+                {
+                  "event": "aktifkanKembali",
+                  "from_state": "Cuti",
+                  "to_state": "Aktif",
+                  "parameters": [{ "name": "tanggalAktif", "type": "date" }],
+                  "steps": [
+                    { "type": "log", "message": "Mahasiswa ${self.NIM} aktif kembali per ${tanggalAktif}." },
+                    { "type": "update", "attribute": "Current_State", "value": "Aktif" }
+                  ]
+                },
+                {
+                  "event": "dinyatakanLulus",
+                  "from_state": "Aktif",
+                  "to_state": "Lulus",
+                  "parameters": [{ "name": "tanggalLulus", "type": "date" }],
+                  "steps": [
+                    { "type": "log", "message": "Mahasiswa ${self.NIM} telah lulus pada ${tanggalLulus}." },
+                    { "type": "update", "attribute": "Current_State", "value": "Lulus" }
+                  ]
+                }
               ]
             }
           },
@@ -75,7 +80,43 @@
               { "name": "Person_ID", "type": "unique_ID", "is_identifier": false, "referential": "R1" },
               { "name": "NIP", "type": "string", "is_identifier": true },
               { "name": "Current_State", "type": "state<DSN>", "is_identifier": false }
-            ]
+            ],
+            "state_model": {
+              "initial_state": "Aktif Mengajar",
+              "states": [{ "name": "Aktif Mengajar" }, { "name": "Cuti Akademik" }, { "name": "Pensiun" }],
+              "transitions": [
+                {
+                  "event": "ajukanCuti",
+                  "from_state": "Aktif Mengajar",
+                  "to_state": "Cuti Akademik",
+                  "parameters": [{ "name": "durasiCuti", "type": "integer" }],
+                  "steps": [
+                    { "type": "log", "message": "Dosen ${self.NIP} mengajukan cuti selama ${durasiCuti} bulan." },
+                    { "type": "update", "attribute": "Current_State", "value": "Cuti Akademik" }
+                  ]
+                },
+                {
+                  "event": "selesaiCuti",
+                  "from_state": "Cuti Akademik",
+                  "to_state": "Aktif Mengajar",
+                  "parameters": [{ "name": "tanggalKembali", "type": "date" }],
+                  "steps": [
+                    { "type": "log", "message": "Dosen ${self.NIP} kembali mengajar pada ${tanggalKembali}." },
+                    { "type": "update", "attribute": "Current_State", "value": "Aktif Mengajar" }
+                  ]
+                },
+                {
+                  "event": "memasukiPensiun",
+                  "from_state": "Aktif Mengajar",
+                  "to_state": "Pensiun",
+                  "parameters": [{ "name": "tanggalPensiun", "type": "date" }],
+                  "steps": [
+                    { "type": "log", "message": "Dosen ${self.NIP} pensiun per ${tanggalPensiun}." },
+                    { "type": "update", "attribute": "Current_State", "value": "Pensiun" }
+                  ]
+                }
+              ]
+            }
           },
           {
             "name": "MataKuliah",
@@ -105,26 +146,14 @@
           {
             "label": "R1",
             "type": "Subtype",
-            "description": "Person adalah supertype dari Mahasiswa dan Dosen",
             "superclass": { "key_letter": "PRS" },
             "subclasses": [{ "key_letter": "MHS" }, { "key_letter": "DSN" }]
           },
           {
             "label": "R2",
             "type": "Associative",
-            "description": "Mahasiswa mengambil Mata Kuliah (diformalkan oleh KRS)",
-            "one_side": {
-              "key_letter": "MHS",
-              "phrase": "mengambil",
-              "mult": "One",
-              "cond": "Mandatory"
-            },
-            "other_side": {
-              "key_letter": "MK",
-              "phrase": "diambil oleh",
-              "mult": "Many",
-              "cond": "Optional"
-            },
+            "one_side": { "key_letter": "MHS", "phrase": "mengambil", "mult": "One", "cond": "Mandatory" },
+            "other_side": { "key_letter": "MK", "phrase": "diambil oleh", "mult": "Many", "cond": "Optional" },
             "association_class": { "key_letter": "KRS" }
           }
         ]

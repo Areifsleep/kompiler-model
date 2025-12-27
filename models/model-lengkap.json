@@ -1,7 +1,7 @@
 {
   "system_model": {
     "system_name": "Sistem Informasi Akademik",
-    "version": "2.0.0-xtuml-strict",
+    "version": "3.0.0-xtuml-complete",
     "subsystems": [
       {
         "name": "Manajemen Akademik",
@@ -11,7 +11,9 @@
           { "name": "nama_orang", "core_type": "string" },
           { "name": "kode_mk", "core_type": "string" },
           { "name": "sks_type", "core_type": "integer" },
-          { "name": "tanggal", "core_type": "date" }
+          { "name": "tanggal", "core_type": "date" },
+          { "name": "state<MHS>", "core_type": "string" },
+          { "name": "state<DSN>", "core_type": "string" }
         ],
         "classes": [
           {
@@ -85,7 +87,8 @@
               { "name": "MK_ID", "type": "unique_ID", "is_identifier": true },
               { "name": "KodeMK", "type": "kode_mk", "is_identifier": false },
               { "name": "NamaMK", "type": "string", "is_identifier": false },
-              { "name": "SKS", "type": "sks_type", "is_identifier": false }
+              { "name": "SKS", "type": "sks_type", "is_identifier": false },
+              { "name": "DSN_ID", "type": "unique_ID", "is_identifier": false, "referential": "R3" }
             ]
           },
           {
@@ -98,6 +101,29 @@
               { "name": "MK_ID", "type": "unique_ID", "is_identifier": true, "referential": "R2" },
               { "name": "Semester", "type": "string", "is_identifier": false },
               { "name": "Nilai", "type": "string", "is_identifier": false }
+            ]
+          },
+          {
+            "name": "Ruangan",
+            "key_letter": "RNG",
+            "class_number": 6,
+            "attributes": [
+              { "name": "RNG_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "NamaRuangan", "type": "string", "is_identifier": false },
+              { "name": "Kapasitas", "type": "sks_type", "is_identifier": false }
+            ]
+          },
+          {
+            "name": "Jadwal",
+            "key_letter": "JDW",
+            "class_number": 7,
+            "attributes": [
+              { "name": "JDW_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "MK_ID", "type": "unique_ID", "is_identifier": false, "referential": "R4" },
+              { "name": "RNG_ID", "type": "unique_ID", "is_identifier": false, "referential": "R5" },
+              { "name": "Hari", "type": "string", "is_identifier": false },
+              { "name": "JamMulai", "type": "string", "is_identifier": false },
+              { "name": "JamSelesai", "type": "string", "is_identifier": false }
             ]
           }
         ],
@@ -116,8 +142,8 @@
             "one_side": {
               "key_letter": "MHS",
               "phrase": "mengambil",
-              "mult": "One",
-              "cond": "Mandatory"
+              "mult": "Many",
+              "cond": "Optional"
             },
             "other_side": {
               "key_letter": "MK",
@@ -126,6 +152,57 @@
               "cond": "Optional"
             },
             "association_class": { "key_letter": "KRS" }
+          },
+          {
+            "label": "R3",
+            "type": "Simple",
+            "description": "Dosen mengajar Mata Kuliah",
+            "one_side": {
+              "key_letter": "DSN",
+              "phrase": "mengajar",
+              "mult": "One",
+              "cond": "Optional"
+            },
+            "other_side": {
+              "key_letter": "MK",
+              "phrase": "diajar oleh",
+              "mult": "Many",
+              "cond": "Mandatory"
+            }
+          },
+          {
+            "label": "R4",
+            "type": "Simple",
+            "description": "Mata Kuliah memiliki Jadwal",
+            "one_side": {
+              "key_letter": "MK",
+              "phrase": "memiliki",
+              "mult": "One",
+              "cond": "Mandatory"
+            },
+            "other_side": {
+              "key_letter": "JDW",
+              "phrase": "untuk",
+              "mult": "Many",
+              "cond": "Optional"
+            }
+          },
+          {
+            "label": "R5",
+            "type": "Simple",
+            "description": "Ruangan digunakan untuk Jadwal",
+            "one_side": {
+              "key_letter": "RNG",
+              "phrase": "digunakan untuk",
+              "mult": "One",
+              "cond": "Mandatory"
+            },
+            "other_side": {
+              "key_letter": "JDW",
+              "phrase": "menggunakan",
+              "mult": "Many",
+              "cond": "Optional"
+            }
           }
         ]
       }

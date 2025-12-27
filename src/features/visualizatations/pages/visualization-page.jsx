@@ -1,26 +1,523 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router";
 import { AlertCircle } from "lucide-react";
+import ReactFlow, {
+  MiniMap,
+  Controls,
+  Background,
+  useNodesState,
+  useEdgesState,
+  MarkerType,
+  Handle,
+  Position,
+} from "reactflow";
+import "reactflow/dist/style.css";
+
+// Custom Node Component for UML Class
+const ClassNode = ({ data }) => {
+  return (
+    <div
+      style={{
+        background: data.backgroundColor || "#ffffff",
+        border: `2px solid ${data.borderColor || "#3b82f6"}`,
+        borderRadius: "6px",
+        minWidth: "250px",
+        fontSize: "12px",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+      }}
+    >
+      <Handle
+        type="target"
+        position={Position.Top}
+        style={{ background: "#555" }}
+      />
+
+      {/* Class Header */}
+      <div
+        style={{
+          padding: "10px 12px",
+          fontWeight: "bold",
+          fontSize: "14px",
+          borderBottom: "2px solid " + (data.borderColor || "#3b82f6"),
+          textAlign: "center",
+          background: data.headerBackground || "#f8fafc",
+        }}
+      >
+        {data.className}
+        <div
+          style={{
+            fontSize: "11px",
+            fontWeight: "normal",
+            color: "#64748b",
+            marginTop: "2px",
+          }}
+        >
+          ({data.keyLetter})
+        </div>
+      </div>
+
+      {/* Attributes Section */}
+      <div
+        style={{
+          padding: "8px 12px",
+          background: "#ffffff",
+        }}
+      >
+        {data.attributes && data.attributes.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            {data.attributes.map((attr, i) => (
+              <div
+                key={i}
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "11px",
+                  padding: "3px 6px",
+                  background: "#f8fafc",
+                  borderRadius: "3px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span>{attr.name}</span>
+                <span style={{ color: "#64748b", fontSize: "10px" }}>
+                  {attr.type}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            style={{ color: "#94a3b8", fontSize: "10px", fontStyle: "italic" }}
+          >
+            No attributes
+          </div>
+        )}
+      </div>
+
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        style={{ background: "#555" }}
+      />
+    </div>
+  );
+};
+
+const nodeTypes = {
+  classNode: ClassNode,
+};
 
 export default function VisualizationPage() {
   const navigate = useNavigate();
   const [modelData, setModelData] = useState(null);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  const buildDiagram = useCallback(
+    (model) => {
+      if (!model?.system_model?.subsystems?.[0]) return;
+
+      const subsystem = model.system_model.subsystems[0];
+      const classes = subsystem.classes || [];
+      const relationships = subsystem.relationships || [];
+
+      console.log("Building diagram with:", { classes, relationships });
+
+      const newNodes = [];
+      const newEdges = [];
+      let yOffset = 0;
+      const verticalGap = 200;
+      const horizontalGap = 350;
+
+      // Find supertype relationships
+      const subtypeRels = relationships.filter((r) => r.type === "Subtype");
+      const supertypeKeys = subtypeRels.map((r) => r.superclass.key_letter);
+      const subtypeKeys = subtypeRels.flatMap((r) =>
+        r.subclasses.map((s) => s.key_letter)
+      );
+
+      // Separate classes by role
+      const superclasses = classes.filter((c) =>
+        supertypeKeys.includes(c.key_letter)
+      );
+      const subclasses = classes.filter((c) =>
+        subtypeKeys.includes(c.key_letter)
+      );
+      const associationClasses = classes.filter(
+        (c) => c.type === "Association"
+      );
+      const regularClasses = classes.filter(
+        (c) =>
+          !supertypeKeys.includes(c.key_letter) &&
+          !subtypeKeys.includes(c.key_letter) &&
+          c.type !== "Association"
+      );
+
+      // Render superclasses first (top level)
+      superclasses.forEach((cls, index) => {
+        const attributes = cls.attributes.map((attr) => {
+          return {
+            name: attr.name,
+            type: attr.type,
+          };
+        });
+
+        newNodes.push({
+          id: cls.key_letter,
+          type: "classNode",
+          position: { x: index * horizontalGap, y: yOffset },
+          data: {
+            className: cls.name,
+            keyLetter: cls.key_letter,
+            attributes: attributes,
+            backgroundColor: "#ffffff",
+            borderColor: "#3b82f6",
+            headerBackground: "#dbeafe",
+          },
+        });
+      });
+
+      yOffset += verticalGap;
+
+      // Render subclasses
+      subclasses.forEach((cls, index) => {
+        const attributes = cls.attributes.map((attr) => {
+          return {
+            name: attr.name,
+            type: attr.type,
+          };
+        });
+
+        newNodes.push({
+          id: cls.key_letter,
+          type: "classNode",
+          position: { x: index * horizontalGap, y: yOffset },
+          data: {
+            className: cls.name,
+            keyLetter: cls.key_letter,
+            attributes: attributes,
+            backgroundColor: "#ffffff",
+            borderColor: "#10b981",
+            headerBackground: "#d1fae5",
+          },
+        });
+      });
+
+      yOffset += verticalGap;
+
+      // Render regular classes
+      regularClasses.forEach((cls, index) => {
+        const attributes = cls.attributes.map((attr) => {
+          return {
+            name: attr.name,
+            type: attr.type,
+          };
+        });
+
+        newNodes.push({
+          id: cls.key_letter,
+          type: "classNode",
+          position: { x: index * horizontalGap, y: yOffset },
+          data: {
+            className: cls.name,
+            keyLetter: cls.key_letter,
+            attributes: attributes,
+            backgroundColor: "#ffffff",
+            borderColor: "#6b7280",
+            headerBackground: "#f1f5f9",
+          },
+        });
+      });
+
+      yOffset += verticalGap;
+
+      // Render association classes
+      associationClasses.forEach((cls, index) => {
+        const attributes = cls.attributes.map((attr) => {
+          return {
+            name: attr.name,
+            type: attr.type,
+          };
+        });
+
+        newNodes.push({
+          id: cls.key_letter,
+          type: "classNode",
+          position: {
+            x: index * horizontalGap + horizontalGap / 2,
+            y: yOffset,
+          },
+          data: {
+            className: cls.name,
+            keyLetter: cls.key_letter,
+            attributes: attributes,
+            backgroundColor: "#fef3c7",
+            borderColor: "#f59e0b",
+            headerBackground: "#fde68a",
+          },
+        });
+      });
+
+      // Build edges - UML Professional Standards
+      relationships.forEach((rel) => {
+        if (rel.type === "Subtype") {
+          // Generalization/Inheritance - Hollow Triangle (from child to parent in UML standard)
+          rel.subclasses.forEach((sub) => {
+            newEdges.push({
+              id: `${rel.superclass.key_letter}-${sub.key_letter}`,
+              source: rel.superclass.key_letter,
+              target: sub.key_letter,
+              label: `${rel.label} (Inheritance)`,
+              type: "default",
+              animated: false,
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                width: 25,
+                height: 25,
+                color: "#3b82f6",
+              },
+              style: {
+                stroke: "#3b82f6",
+                strokeWidth: 2.5,
+              },
+              labelStyle: {
+                fill: "#1e40af",
+                fontWeight: 600,
+                fontSize: "12px",
+              },
+              labelBgStyle: {
+                fill: "#dbeafe",
+                fillOpacity: 0.95,
+              },
+              labelBgPadding: [8, 6],
+              labelBgBorderRadius: 4,
+            });
+          });
+        } else if (rel.type === "Associative") {
+          // Many-to-Many with Association Class
+          const oneSide = rel.one_side;
+          const otherSide = rel.other_side;
+          const assocClass = rel.association_class;
+
+          newEdges.push({
+            id: `${oneSide.key_letter}-${assocClass.key_letter}`,
+            source: oneSide.key_letter,
+            target: assocClass.key_letter,
+            type: "default",
+            label: `${rel.label} (M:N)`,
+            style: {
+              stroke: "#f59e0b",
+              strokeWidth: 2,
+            },
+            labelStyle: {
+              fill: "#92400e",
+              fontWeight: 600,
+              fontSize: "11px",
+            },
+            labelBgStyle: {
+              fill: "#fef3c7",
+              fillOpacity: 0.95,
+            },
+            labelBgPadding: [6, 4],
+            labelBgBorderRadius: 3,
+          });
+
+          newEdges.push({
+            id: `${assocClass.key_letter}-${otherSide.key_letter}`,
+            source: assocClass.key_letter,
+            target: otherSide.key_letter,
+            type: "default",
+            style: {
+              stroke: "#f59e0b",
+              strokeWidth: 2,
+            },
+          });
+        } else if (rel.type === "Simple") {
+          // Simple Association (One-to-Many)
+          const oneSide = rel.one_side;
+          const otherSide = rel.other_side;
+
+          if (oneSide && otherSide) {
+            const sourceKL =
+              oneSide.mult === "One"
+                ? oneSide.key_letter
+                : otherSide.key_letter;
+            const targetKL =
+              oneSide.mult === "Many"
+                ? oneSide.key_letter
+                : otherSide.key_letter;
+
+            newEdges.push({
+              id: `${sourceKL}-${targetKL}-${rel.label}`,
+              source: sourceKL,
+              target: targetKL,
+              label: `${rel.label} (1:N)`,
+              type: "default",
+              markerEnd: {
+                type: MarkerType.Arrow,
+                width: 20,
+                height: 20,
+                color: "#8b5cf6",
+              },
+              style: {
+                stroke: "#8b5cf6",
+                strokeWidth: 2,
+              },
+              labelStyle: {
+                fill: "#6d28d9",
+                fontWeight: 600,
+                fontSize: "11px",
+              },
+              labelBgStyle: {
+                fill: "#ede9fe",
+                fillOpacity: 0.95,
+              },
+              labelBgPadding: [6, 4],
+              labelBgBorderRadius: 3,
+            });
+          }
+        } else if (rel.type === "Composition") {
+          // Composition - Filled Diamond (Strong Ownership)
+          const oneSide = rel.one_side;
+          const otherSide = rel.other_side;
+
+          if (oneSide && otherSide) {
+            // Container (One side) -> Contained (Other side)
+            const sourceKL = oneSide.key_letter;
+            const targetKL = otherSide.key_letter;
+
+            newEdges.push({
+              id: `${sourceKL}-${targetKL}-${rel.label}`,
+              source: sourceKL,
+              target: targetKL,
+              label: `${rel.label} (Composition)`,
+              type: "default",
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                width: 22,
+                height: 22,
+                color: "#dc2626",
+              },
+              style: {
+                stroke: "#dc2626",
+                strokeWidth: 2.5,
+                strokeDasharray: "0",
+              },
+              labelStyle: {
+                fill: "#991b1b",
+                fontWeight: 700,
+                fontSize: "11px",
+              },
+              labelBgStyle: {
+                fill: "#fee2e2",
+                fillOpacity: 0.95,
+              },
+              labelBgPadding: [6, 4],
+              labelBgBorderRadius: 3,
+            });
+          }
+        } else if (rel.type === "Aggregation") {
+          // Aggregation - Hollow Diamond (Weak Ownership)
+          const oneSide = rel.one_side;
+          const otherSide = rel.other_side;
+          const assocClass = rel.association_class;
+
+          if (oneSide && otherSide && assocClass) {
+            // For aggregation with association class (like R7)
+            newEdges.push({
+              id: `${oneSide.key_letter}-${assocClass.key_letter}-${rel.label}`,
+              source: oneSide.key_letter,
+              target: assocClass.key_letter,
+              label: `${rel.label} (Aggregation)`,
+              type: "default",
+              style: {
+                stroke: "#059669",
+                strokeWidth: 2,
+                strokeDasharray: "5,5",
+              },
+              labelStyle: {
+                fill: "#047857",
+                fontWeight: 600,
+                fontSize: "11px",
+              },
+              labelBgStyle: {
+                fill: "#d1fae5",
+                fillOpacity: 0.95,
+              },
+              labelBgPadding: [6, 4],
+              labelBgBorderRadius: 3,
+            });
+
+            newEdges.push({
+              id: `${assocClass.key_letter}-${otherSide.key_letter}-${rel.label}`,
+              source: assocClass.key_letter,
+              target: otherSide.key_letter,
+              type: "default",
+              style: {
+                stroke: "#059669",
+                strokeWidth: 2,
+                strokeDasharray: "5,5",
+              },
+            });
+          }
+        } else if (rel.type === "Reflexive") {
+          // Self-Referencing Relationship
+          const oneSide = rel.one_side;
+
+          if (oneSide) {
+            newEdges.push({
+              id: `${oneSide.key_letter}-self-${rel.label}`,
+              source: oneSide.key_letter,
+              target: oneSide.key_letter,
+              label: `${rel.label} (Reflexive)`,
+              type: "default",
+              markerEnd: {
+                type: MarkerType.Arrow,
+                width: 18,
+                height: 18,
+                color: "#ec4899",
+              },
+              style: {
+                stroke: "#ec4899",
+                strokeWidth: 2,
+              },
+              labelStyle: {
+                fill: "#be185d",
+                fontWeight: 600,
+                fontSize: "11px",
+              },
+              labelBgStyle: {
+                fill: "#fce7f3",
+                fillOpacity: 0.95,
+              },
+              labelBgPadding: [6, 4],
+              labelBgBorderRadius: 3,
+            });
+          }
+        }
+      });
+
+      setNodes(newNodes);
+      setEdges(newEdges);
+    },
+    [setNodes, setEdges]
+  );
 
   useEffect(() => {
-    // Load parsed data dari localStorage
     const stored = localStorage.getItem("parsedModel");
     if (stored) {
       try {
-        setModelData(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        setModelData(parsed);
+        buildDiagram(parsed);
       } catch (error) {
         console.error("Error loading model data:", error);
       }
     }
-  }, []);
+  }, [buildDiagram]);
 
   const handleContinue = () => {
     navigate("/translation");
@@ -34,7 +531,9 @@ export default function VisualizationPage() {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               <div className="font-semibold mb-2">Tidak ada data model</div>
-              <p className="text-sm mb-4">Silakan parse JSON model terlebih dahulu.</p>
+              <p className="text-sm mb-4">
+                Silakan parse JSON model terlebih dahulu.
+              </p>
               <Button
                 variant="outline"
                 size="sm"
@@ -50,131 +549,135 @@ export default function VisualizationPage() {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Model Visualization</h1>
-          <p className="text-muted-foreground">Visualisasi class diagram dan relationship model</p>
-        </div>
+    <div
+      className="container mx-auto p-6"
+      style={{ height: "100vh", display: "flex", flexDirection: "column" }}
+    >
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">Model Visualization</h1>
+        <p className="text-muted-foreground">
+          Visualisasi class diagram dan relationship model UML
+        </p>
+      </div>
 
-        <Tabs
-          defaultValue="classes"
-          className="w-full"
+      <div
+        style={{
+          flex: 1,
+          border: "1px solid #e5e7eb",
+          borderRadius: "8px",
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        {/* Legend */}
+        <div
+          style={{
+            position: "absolute",
+            top: "10px",
+            left: "10px",
+            zIndex: 10,
+            background: "white",
+            padding: "12px 16px",
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            fontSize: "11px",
+            maxWidth: "280px",
+          }}
         >
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="classes">Classes</TabsTrigger>
-            <TabsTrigger value="relationships">Relationships</TabsTrigger>
-            <TabsTrigger value="diagram">Diagram</TabsTrigger>
-          </TabsList>
-
-          <TabsContent
-            value="classes"
-            className="space-y-4"
+          <div
+            style={{
+              fontWeight: "bold",
+              marginBottom: "8px",
+              fontSize: "12px",
+            }}
           >
-            <div className="grid md:grid-cols-2 gap-4">
-              {modelData.classes?.map((cls, index) => (
-                <Card key={index}>
-                  <CardHeader>
-                    <CardTitle className="text-xl">{cls.name}</CardTitle>
-                    <CardDescription>Class Definition</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {cls.attributes && cls.attributes.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold mb-2 text-sm">Attributes:</h4>
-                        <ul className="space-y-1">
-                          {cls.attributes.map((attr, i) => (
-                            <li
-                              key={i}
-                              className="text-sm font-mono bg-muted px-2 py-1 rounded"
-                            >
-                              {attr.name}: {attr.type}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {cls.methods && cls.methods.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold mb-2 text-sm">Methods:</h4>
-                        <ul className="space-y-1">
-                          {cls.methods.map((method, i) => (
-                            <li
-                              key={i}
-                              className="text-sm font-mono bg-muted px-2 py-1 rounded"
-                            >
-                              {method.name}(): {method.returnType}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+            Relationship Types
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div
+                style={{
+                  width: "30px",
+                  height: "2.5px",
+                  background: "#3b82f6",
+                }}
+              ></div>
+              <span>Inheritance (R1)</span>
             </div>
-          </TabsContent>
-
-          <TabsContent
-            value="relationships"
-            className="space-y-4"
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle>Relationships</CardTitle>
-                <CardDescription>Relasi antar class dalam model</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {modelData.relationships && modelData.relationships.length > 0 ? (
-                  <div className="space-y-2">
-                    {modelData.relationships.map((rel, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-4 p-3 border rounded-lg"
-                      >
-                        <span className="font-semibold">{rel.from}</span>
-                        <span className="text-muted-foreground">—</span>
-                        <span className="px-3 py-1 bg-primary/10 text-primary rounded text-sm font-medium">{rel.type}</span>
-                        <span className="text-muted-foreground">→</span>
-                        <span className="font-semibold">{rel.to}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Tidak ada relationship yang didefinisikan.</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent
-            value="diagram"
-            className="space-y-4"
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle>Class Diagram</CardTitle>
-                <CardDescription>Visualisasi diagram (Coming Soon)</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-muted rounded-lg h-96 flex items-center justify-center">
-                  <p className="text-muted-foreground">Diagram visualization akan ditambahkan di sini</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        <div className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={() => navigate("/parsing")}
-          >
-            ← Kembali ke Parsing
-          </Button>
-          <Button onClick={handleContinue}>Lanjut ke Translasi →</Button>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div
+                style={{ width: "30px", height: "2px", background: "#f59e0b" }}
+              ></div>
+              <span>Associative M:N (R2)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div
+                style={{ width: "30px", height: "2px", background: "#8b5cf6" }}
+              ></div>
+              <span>Simple 1:N (R3-R5)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div
+                style={{
+                  width: "30px",
+                  height: "2.5px",
+                  background: "#dc2626",
+                }}
+              ></div>
+              <span>Composition (R6)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div
+                style={{
+                  width: "30px",
+                  height: "2px",
+                  background: "#059669",
+                  borderTop: "2px dashed #059669",
+                }}
+              ></div>
+              <span>Aggregation (R7)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div
+                style={{ width: "30px", height: "2px", background: "#ec4899" }}
+              ></div>
+              <span>Reflexive (R8)</span>
+            </div>
+          </div>
         </div>
+
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          nodeTypes={nodeTypes}
+          fitView
+          proOptions={{
+            hideAttribution: true,
+          }}
+          minZoom={0.1}
+          maxZoom={2}
+          defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+        >
+          <Controls
+            position="top-right"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px",
+              margin: "10px",
+            }}
+          />
+          <Background />
+        </ReactFlow>
+      </div>
+
+      <div className="flex justify-between mt-6">
+        <Button variant="outline" onClick={() => navigate("/parsing")}>
+          ← Kembali ke Parsing
+        </Button>
+        <Button onClick={handleContinue}>Lanjut ke Translasi →</Button>
       </div>
     </div>
   );

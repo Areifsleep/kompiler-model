@@ -1,3 +1,4 @@
+export const exampleJSON = `
 {
   "system_model": {
     "system_name": "Sistem Informasi Akademik",
@@ -41,17 +42,17 @@
                 {
                   "name": "Aktif",
                   "state_number": 1,
-                  "action_oal": "// State Aktif\nself.Current_State = \"Aktif\";"
+                  "action_oal": "// State Aktif\\nself.Current_State = \\"Aktif\\";"
                 },
                 {
                   "name": "Cuti",
                   "state_number": 2,
-                  "action_oal": "// Entry Action State Cuti\n// param.alasan diterima dari event\nLOG::LogInfo(message:\"Mahasiswa cuti: \" + param.alasan);\nself.Current_State = \"Cuti\";"
+                  "action_oal": "// Entry Action State Cuti\\n// param.alasan diterima dari event\\nLOG::LogInfo(message:\\"Mahasiswa cuti: \\" + param.alasan);\\nself.Current_State = \\"Cuti\\";"
                 },
                 {
                   "name": "Lulus",
                   "state_number": 3,
-                  "action_oal": "// Entry Action State Lulus\nLOG::LogInfo(message:\"Mahasiswa telah lulus.\");\nself.Current_State = \"Lulus\";"
+                  "action_oal": "// Entry Action State Lulus\\nLOG::LogInfo(message:\\"Mahasiswa telah lulus.\\");\\nself.Current_State = \\"Lulus\\";"
                 }
               ],
               "events": [
@@ -127,8 +128,22 @@
             },
             "association_class": { "key_letter": "KRS" }
           }
+        ],
+        "external_entities": [
+          {
+            "key_letter": "LOG",
+            "name": "Logging Service",
+            "bridges": [
+              {
+                "name": "LogInfo",
+                "parameters": [{ "name": "message", "type": "string" }],
+                "return_type": "void"
+              }
+            ]
+          }
         ]
       }
     ]
   }
 }
+`;

@@ -3,34 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import CodeMirror from "@uiw/react-codemirror";
 import { json } from "@codemirror/lang-json";
 import { useTheme } from "@/components/theme-provider";
-
-const exampleJSON = `{
-  "classes": [
-    {
-      "name": "User",
-      "attributes": [
-        { "name": "id", "type": "string" },
-        { "name": "name", "type": "string" },
-        { "name": "email", "type": "string" }
-      ],
-      "methods": [
-        { "name": "login", "returnType": "boolean" },
-        { "name": "logout", "returnType": "void" }
-      ]
-    }
-  ],
-  "relationships": [
-    {
-      "from": "User",
-      "to": "Order",
-      "type": "hasMany"
-    }
-  ]
-}`;
+import { XtUMLParser, getLineContext } from "../utils/xtuml-validator";
+import ErrorDisplay from "../components/ErrorDisplay";
+import { exampleJSON } from "@/constants/example-json";
+import { toast } from "sonner";
 
 export default function ParsingPage() {
   const navigate = useNavigate();
@@ -39,6 +19,7 @@ export default function ParsingPage() {
   const [isValid, setIsValid] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const fileInputRef = useRef(null);
+  const resultRef = useRef(null);
 
   const handleFileLoad = (event) => {
     const file = event.target.files?.[0];
@@ -79,28 +60,38 @@ export default function ParsingPage() {
     try {
       // Validasi JSON
       const parsed = JSON.parse(jsonInput);
+      console.log("Parsed JSON:", parsed);
 
-      // Validasi struktur dasar (contoh validasi)
-      const validationErrors = [];
+      // Gunakan XtUMLParser untuk validasi mendalam
+      const parser = new XtUMLParser();
+      const validationErrors = parser.parse(parsed, jsonInput);
+      console.log("Validation Errors:", validationErrors);
 
-      if (!parsed.classes || !Array.isArray(parsed.classes)) {
-        validationErrors.push('Property "classes" harus berupa array');
-      }
+      // Enhance errors dengan code preview jika ada line number
+      const enhancedErrors = validationErrors.map((error) => {
+        if (error.line && jsonInput) {
+          const codePreview = getLineContext(jsonInput, error.line, 2);
+          return { ...error, codePreview };
+        }
+        return error;
+      });
 
-      if (!parsed.relationships || !Array.isArray(parsed.relationships)) {
-        validationErrors.push('Property "relationships" harus berupa array');
-      }
-
-      if (validationErrors.length > 0) {
-        setErrors(validationErrors);
+      if (enhancedErrors.length > 0) {
+        setErrors(enhancedErrors);
         setIsValid(false);
       } else {
         setIsValid(true);
         // Simpan parsed data ke localStorage atau state management
         localStorage.setItem("parsedModel", JSON.stringify(parsed));
       }
+
+      // Auto scroll to results
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
     } catch (error) {
-      setErrors([`JSON tidak valid: ${error.message}`]);
+      console.error("Parse Error:", error);
+      toast.error(`Format JSON tidak valid dengan detail error: ${error.message}`);
       setIsValid(false);
     } finally {
       setIsParsing(false);
@@ -122,15 +113,15 @@ export default function ParsingPage() {
     : theme;
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="mb-6">
+    <div className="w-full p-6">
+      <div className="w-full space-y-6">
+        <div className="mb-6 max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold mb-2">JSON Parsing</h1>
           <p className="text-muted-foreground">Input model JSON Anda dan validasi strukturnya</p>
         </div>
 
-        <div className="grid xl:grid-cols-2 gap-6">
-          <Card>
+        <div className="w-full space-y-6 max-w-7xl mx-auto">
+          <Card className="w-full">
             <CardHeader>
               <CardTitle>Input JSON Model</CardTitle>
               <CardDescription>Paste JSON model Anda di sini</CardDescription>
@@ -138,7 +129,7 @@ export default function ParsingPage() {
             <CardContent className="space-y-4">
               <CodeMirror
                 value={jsonInput}
-                height="400px"
+                height="500px"
                 extensions={[json()]}
                 onChange={(value) => setJsonInput(value)}
                 placeholder="Masukkan JSON model..."
@@ -187,38 +178,24 @@ export default function ParsingPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card
+            ref={resultRef}
+            className="w-full"
+          >
             <CardHeader>
               <CardTitle>Hasil Validasi</CardTitle>
               <CardDescription>Status dan error dari proses parsing</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {errors.length > 0 && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    <div className="font-semibold mb-2">Validation Errors:</div>
-                    <ul className="list-disc list-inside space-y-1">
-                      {errors.map((error, index) => (
-                        <li
-                          key={index}
-                          className="text-sm"
-                        >
-                          {error}
-                        </li>
-                      ))}
-                    </ul>
-                  </AlertDescription>
-                </Alert>
-              )}
+              {errors.length > 0 && <ErrorDisplay errors={errors} />}
 
               {isValid && (
                 <>
                   <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                     <AlertDescription className="text-green-800 dark:text-green-200">
-                      <div className="font-semibold mb-1">JSON Valid!</div>
-                      <p className="text-sm">Model berhasil diparse dan siap untuk divisualisasikan.</p>
+                      <div className="font-semibold mb-1">Validation Passed!</div>
+                      <p className="text-sm">Model berhasil diparse tanpa error dan siap untuk divisualisasikan.</p>
                     </AlertDescription>
                   </Alert>
 
@@ -235,11 +212,15 @@ export default function ParsingPage() {
                 <div className="text-sm text-muted-foreground">
                   <p className="mb-4">Belum ada data yang diparse.</p>
                   <div className="space-y-2">
-                    <p className="font-semibold">Format JSON yang diharapkan:</p>
+                    <p className="font-semibold">Format JSON xtUML yang diharapkan:</p>
                     <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
                       {`{
-  "classes": [...],
-  "relationships": [...]
+  "system_model": {
+    "subsystems": [{
+      "classes": [...],
+      "external_entities": [...]
+    }]
+  }
 }`}
                     </pre>
                   </div>

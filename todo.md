@@ -24,6 +24,8 @@ Format Atribut Referensi (Rule 10): Cek apakah atribut yang dimaksudkan sebagai 
 
 Kesesuaian KeyLetter (Rule 15): Pastikan KeyLetter pada State Model benar-benar ada di daftar Object. "The KeyLetter of the state model is the KeyLetter of the object". Jika State Model punya KeyLetter 'XYZ' tapi tidak ada Objek 'XYZ', itu error.
 
+=================================================================================================================================
+
 #visualisasi (generate diagram kelas dan relasi dari jsonnya)
 
 #translate (button translate muncul setelah json berhasil diparsing tanpa error)
