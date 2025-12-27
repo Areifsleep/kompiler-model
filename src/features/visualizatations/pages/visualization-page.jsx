@@ -3,7 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router";
 import { AlertCircle } from "lucide-react";
-import ReactFlow, { MiniMap, Controls, Background, useNodesState, useEdgesState, MarkerType, Handle, Position } from "reactflow";
+import ReactFlow, {
+  MiniMap,
+  Controls,
+  Background,
+  useNodesState,
+  useEdgesState,
+  MarkerType,
+  Handle,
+  Position,
+} from "reactflow";
 import "reactflow/dist/style.css";
 
 // Custom Node Component for UML Class
@@ -37,7 +46,16 @@ const ClassNode = ({ data }) => {
         }}
       >
         {data.className}
-        <div style={{ fontSize: "11px", fontWeight: "normal", color: "#64748b", marginTop: "2px" }}>({data.keyLetter})</div>
+        <div
+          style={{
+            fontSize: "11px",
+            fontWeight: "normal",
+            color: "#64748b",
+            marginTop: "2px",
+          }}
+        >
+          ({data.keyLetter})
+        </div>
       </div>
 
       {/* Attributes Section */}
@@ -64,12 +82,18 @@ const ClassNode = ({ data }) => {
                 }}
               >
                 <span>{attr.name}</span>
-                <span style={{ color: "#64748b", fontSize: "10px" }}>{attr.type}</span>
+                <span style={{ color: "#64748b", fontSize: "10px" }}>
+                  {attr.type}
+                </span>
               </div>
             ))}
           </div>
         ) : (
-          <div style={{ color: "#94a3b8", fontSize: "10px", fontStyle: "italic" }}>No attributes</div>
+          <div
+            style={{ color: "#94a3b8", fontSize: "10px", fontStyle: "italic" }}
+          >
+            No attributes
+          </div>
         )}
       </div>
 
@@ -111,14 +135,25 @@ export default function VisualizationPage() {
       // Find supertype relationships
       const subtypeRels = relationships.filter((r) => r.type === "Subtype");
       const supertypeKeys = subtypeRels.map((r) => r.superclass.key_letter);
-      const subtypeKeys = subtypeRels.flatMap((r) => r.subclasses.map((s) => s.key_letter));
+      const subtypeKeys = subtypeRels.flatMap((r) =>
+        r.subclasses.map((s) => s.key_letter)
+      );
 
       // Separate classes by role
-      const superclasses = classes.filter((c) => supertypeKeys.includes(c.key_letter));
-      const subclasses = classes.filter((c) => subtypeKeys.includes(c.key_letter));
-      const associationClasses = classes.filter((c) => c.type === "Association");
+      const superclasses = classes.filter((c) =>
+        supertypeKeys.includes(c.key_letter)
+      );
+      const subclasses = classes.filter((c) =>
+        subtypeKeys.includes(c.key_letter)
+      );
+      const associationClasses = classes.filter(
+        (c) => c.type === "Association"
+      );
       const regularClasses = classes.filter(
-        (c) => !supertypeKeys.includes(c.key_letter) && !subtypeKeys.includes(c.key_letter) && c.type !== "Association"
+        (c) =>
+          !supertypeKeys.includes(c.key_letter) &&
+          !subtypeKeys.includes(c.key_letter) &&
+          c.type !== "Association"
       );
 
       // Render superclasses first (top level)
@@ -211,7 +246,10 @@ export default function VisualizationPage() {
         newNodes.push({
           id: cls.key_letter,
           type: "classNode",
-          position: { x: index * horizontalGap + horizontalGap / 2, y: yOffset },
+          position: {
+            x: index * horizontalGap + horizontalGap / 2,
+            y: yOffset,
+          },
           data: {
             className: cls.name,
             keyLetter: cls.key_letter,
@@ -223,15 +261,16 @@ export default function VisualizationPage() {
         });
       });
 
-      // Build edges
+      // Build edges - UML Professional Standards
       relationships.forEach((rel) => {
         if (rel.type === "Subtype") {
+          // Generalization/Inheritance - Hollow Triangle (from child to parent in UML standard)
           rel.subclasses.forEach((sub) => {
             newEdges.push({
               id: `${rel.superclass.key_letter}-${sub.key_letter}`,
               source: rel.superclass.key_letter,
               target: sub.key_letter,
-              label: rel.label,
+              label: `${rel.label} (Inheritance)`,
               type: "default",
               animated: false,
               markerEnd: {
@@ -242,15 +281,15 @@ export default function VisualizationPage() {
               },
               style: {
                 stroke: "#3b82f6",
-                strokeWidth: 3,
+                strokeWidth: 2.5,
               },
               labelStyle: {
                 fill: "#1e40af",
-                fontWeight: 700,
-                fontSize: "13px",
+                fontWeight: 600,
+                fontSize: "12px",
               },
               labelBgStyle: {
-                fill: "#ffffff",
+                fill: "#dbeafe",
                 fillOpacity: 0.95,
               },
               labelBgPadding: [8, 6],
@@ -258,57 +297,206 @@ export default function VisualizationPage() {
             });
           });
         } else if (rel.type === "Associative") {
+          // Many-to-Many with Association Class
           const oneSide = rel.one_side;
           const otherSide = rel.other_side;
           const assocClass = rel.association_class;
 
-          // Edge from one side to association class
           newEdges.push({
             id: `${oneSide.key_letter}-${assocClass.key_letter}`,
             source: oneSide.key_letter,
             target: assocClass.key_letter,
             type: "default",
-            label: `${rel.label}: "${oneSide.phrase}"`,
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              width: 20,
-              height: 20,
-              color: "#f59e0b",
-            },
+            label: `${rel.label} (M:N)`,
             style: {
               stroke: "#f59e0b",
-              strokeWidth: 3,
+              strokeWidth: 2,
             },
             labelStyle: {
               fill: "#92400e",
-              fontWeight: 700,
-              fontSize: "12px",
+              fontWeight: 600,
+              fontSize: "11px",
             },
             labelBgStyle: {
-              fill: "#ffffff",
+              fill: "#fef3c7",
               fillOpacity: 0.95,
             },
-            labelBgPadding: [8, 10],
-            labelBgBorderRadius: 4,
+            labelBgPadding: [6, 4],
+            labelBgBorderRadius: 3,
           });
 
-          // Edge from association class to other side
           newEdges.push({
             id: `${assocClass.key_letter}-${otherSide.key_letter}`,
             source: assocClass.key_letter,
             target: otherSide.key_letter,
             type: "default",
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              width: 20,
-              height: 20,
-              color: "#f59e0b",
-            },
             style: {
               stroke: "#f59e0b",
-              strokeWidth: 3,
+              strokeWidth: 2,
             },
           });
+        } else if (rel.type === "Simple") {
+          // Simple Association (One-to-Many)
+          const oneSide = rel.one_side;
+          const otherSide = rel.other_side;
+
+          if (oneSide && otherSide) {
+            const sourceKL =
+              oneSide.mult === "One"
+                ? oneSide.key_letter
+                : otherSide.key_letter;
+            const targetKL =
+              oneSide.mult === "Many"
+                ? oneSide.key_letter
+                : otherSide.key_letter;
+
+            newEdges.push({
+              id: `${sourceKL}-${targetKL}-${rel.label}`,
+              source: sourceKL,
+              target: targetKL,
+              label: `${rel.label} (1:N)`,
+              type: "default",
+              markerEnd: {
+                type: MarkerType.Arrow,
+                width: 20,
+                height: 20,
+                color: "#8b5cf6",
+              },
+              style: {
+                stroke: "#8b5cf6",
+                strokeWidth: 2,
+              },
+              labelStyle: {
+                fill: "#6d28d9",
+                fontWeight: 600,
+                fontSize: "11px",
+              },
+              labelBgStyle: {
+                fill: "#ede9fe",
+                fillOpacity: 0.95,
+              },
+              labelBgPadding: [6, 4],
+              labelBgBorderRadius: 3,
+            });
+          }
+        } else if (rel.type === "Composition") {
+          // Composition - Filled Diamond (Strong Ownership)
+          const oneSide = rel.one_side;
+          const otherSide = rel.other_side;
+
+          if (oneSide && otherSide) {
+            // Container (One side) -> Contained (Other side)
+            const sourceKL = oneSide.key_letter;
+            const targetKL = otherSide.key_letter;
+
+            newEdges.push({
+              id: `${sourceKL}-${targetKL}-${rel.label}`,
+              source: sourceKL,
+              target: targetKL,
+              label: `${rel.label} (Composition)`,
+              type: "default",
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                width: 22,
+                height: 22,
+                color: "#dc2626",
+              },
+              style: {
+                stroke: "#dc2626",
+                strokeWidth: 2.5,
+                strokeDasharray: "0",
+              },
+              labelStyle: {
+                fill: "#991b1b",
+                fontWeight: 700,
+                fontSize: "11px",
+              },
+              labelBgStyle: {
+                fill: "#fee2e2",
+                fillOpacity: 0.95,
+              },
+              labelBgPadding: [6, 4],
+              labelBgBorderRadius: 3,
+            });
+          }
+        } else if (rel.type === "Aggregation") {
+          // Aggregation - Hollow Diamond (Weak Ownership)
+          const oneSide = rel.one_side;
+          const otherSide = rel.other_side;
+          const assocClass = rel.association_class;
+
+          if (oneSide && otherSide && assocClass) {
+            // For aggregation with association class (like R7)
+            newEdges.push({
+              id: `${oneSide.key_letter}-${assocClass.key_letter}-${rel.label}`,
+              source: oneSide.key_letter,
+              target: assocClass.key_letter,
+              label: `${rel.label} (Aggregation)`,
+              type: "default",
+              style: {
+                stroke: "#059669",
+                strokeWidth: 2,
+                strokeDasharray: "5,5",
+              },
+              labelStyle: {
+                fill: "#047857",
+                fontWeight: 600,
+                fontSize: "11px",
+              },
+              labelBgStyle: {
+                fill: "#d1fae5",
+                fillOpacity: 0.95,
+              },
+              labelBgPadding: [6, 4],
+              labelBgBorderRadius: 3,
+            });
+
+            newEdges.push({
+              id: `${assocClass.key_letter}-${otherSide.key_letter}-${rel.label}`,
+              source: assocClass.key_letter,
+              target: otherSide.key_letter,
+              type: "default",
+              style: {
+                stroke: "#059669",
+                strokeWidth: 2,
+                strokeDasharray: "5,5",
+              },
+            });
+          }
+        } else if (rel.type === "Reflexive") {
+          // Self-Referencing Relationship
+          const oneSide = rel.one_side;
+
+          if (oneSide) {
+            newEdges.push({
+              id: `${oneSide.key_letter}-self-${rel.label}`,
+              source: oneSide.key_letter,
+              target: oneSide.key_letter,
+              label: `${rel.label} (Reflexive)`,
+              type: "default",
+              markerEnd: {
+                type: MarkerType.Arrow,
+                width: 18,
+                height: 18,
+                color: "#ec4899",
+              },
+              style: {
+                stroke: "#ec4899",
+                strokeWidth: 2,
+              },
+              labelStyle: {
+                fill: "#be185d",
+                fontWeight: 600,
+                fontSize: "11px",
+              },
+              labelBgStyle: {
+                fill: "#fce7f3",
+                fillOpacity: 0.95,
+              },
+              labelBgPadding: [6, 4],
+              labelBgBorderRadius: 3,
+            });
+          }
         }
       });
 
@@ -343,7 +531,9 @@ export default function VisualizationPage() {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               <div className="font-semibold mb-2">Tidak ada data model</div>
-              <p className="text-sm mb-4">Silakan parse JSON model terlebih dahulu.</p>
+              <p className="text-sm mb-4">
+                Silakan parse JSON model terlebih dahulu.
+              </p>
               <Button
                 variant="outline"
                 size="sm"
@@ -365,7 +555,9 @@ export default function VisualizationPage() {
     >
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Model Visualization</h1>
-        <p className="text-muted-foreground">Visualisasi class diagram dan relationship model</p>
+        <p className="text-muted-foreground">
+          Visualisasi class diagram dan relationship model UML
+        </p>
       </div>
 
       <div
@@ -377,6 +569,83 @@ export default function VisualizationPage() {
           position: "relative",
         }}
       >
+        {/* Legend */}
+        <div
+          style={{
+            position: "absolute",
+            top: "10px",
+            left: "10px",
+            zIndex: 10,
+            background: "white",
+            padding: "12px 16px",
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            fontSize: "11px",
+            maxWidth: "280px",
+          }}
+        >
+          <div
+            style={{
+              fontWeight: "bold",
+              marginBottom: "8px",
+              fontSize: "12px",
+            }}
+          >
+            Relationship Types
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div
+                style={{
+                  width: "30px",
+                  height: "2.5px",
+                  background: "#3b82f6",
+                }}
+              ></div>
+              <span>Inheritance (R1)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div
+                style={{ width: "30px", height: "2px", background: "#f59e0b" }}
+              ></div>
+              <span>Associative M:N (R2)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div
+                style={{ width: "30px", height: "2px", background: "#8b5cf6" }}
+              ></div>
+              <span>Simple 1:N (R3-R5)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div
+                style={{
+                  width: "30px",
+                  height: "2.5px",
+                  background: "#dc2626",
+                }}
+              ></div>
+              <span>Composition (R6)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div
+                style={{
+                  width: "30px",
+                  height: "2px",
+                  background: "#059669",
+                  borderTop: "2px dashed #059669",
+                }}
+              ></div>
+              <span>Aggregation (R7)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div
+                style={{ width: "30px", height: "2px", background: "#ec4899" }}
+              ></div>
+              <span>Reflexive (R8)</span>
+            </div>
+          </div>
+        </div>
+
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -405,10 +674,7 @@ export default function VisualizationPage() {
       </div>
 
       <div className="flex justify-between mt-6">
-        <Button
-          variant="outline"
-          onClick={() => navigate("/parsing")}
-        >
+        <Button variant="outline" onClick={() => navigate("/parsing")}>
           ← Kembali ke Parsing
         </Button>
         <Button onClick={handleContinue}>Lanjut ke Translasi →</Button>

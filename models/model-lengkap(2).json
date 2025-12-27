@@ -1,0 +1,391 @@
+{
+  "system_model": {
+    "system_name": "Sistem Informasi Akademik",
+    "version": "3.0.0-xtuml-complete",
+    "subsystems": [
+      {
+        "name": "Manajemen Akademik",
+        "prefix": "MCA",
+        "data_types": [
+          { "name": "unique_ID", "core_type": "unique_ID" },
+          { "name": "nama_orang", "core_type": "string" },
+          { "name": "kode_mk", "core_type": "string" },
+          { "name": "sks_type", "core_type": "integer" },
+          { "name": "tanggal", "core_type": "date" },
+          { "name": "state<MHS>", "core_type": "string" },
+          { "name": "state<DSN>", "core_type": "string" }
+        ],
+        "classes": [
+          {
+            "name": "Person",
+            "key_letter": "PRS",
+            "class_number": 1,
+            "attributes": [
+              {
+                "name": "Person_ID",
+                "type": "unique_ID",
+                "is_identifier": true
+              },
+              { "name": "Nama", "type": "nama_orang", "is_identifier": false },
+              { "name": "Email", "type": "string", "is_identifier": false }
+            ]
+          },
+          {
+            "name": "Alamat",
+            "key_letter": "ALM",
+            "class_number": 8,
+            "attributes": [
+              { "name": "ALM_ID", "type": "unique_ID", "is_identifier": true },
+              {
+                "name": "Person_ID",
+                "type": "unique_ID",
+                "is_identifier": false,
+                "referential": "R6"
+              },
+              { "name": "Jalan", "type": "string", "is_identifier": false },
+              { "name": "Kota", "type": "string", "is_identifier": false },
+              { "name": "KodePos", "type": "string", "is_identifier": false }
+            ]
+          },
+          {
+            "name": "Buku",
+            "key_letter": "BKU",
+            "class_number": 9,
+            "attributes": [
+              { "name": "BKU_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "ISBN", "type": "string", "is_identifier": false },
+              { "name": "Judul", "type": "string", "is_identifier": false },
+              { "name": "Pengarang", "type": "string", "is_identifier": false }
+            ]
+          },
+          {
+            "name": "ReferensiBuku",
+            "key_letter": "RFB",
+            "class_number": 10,
+            "type": "Association",
+            "attributes": [
+              {
+                "name": "MK_ID",
+                "type": "unique_ID",
+                "is_identifier": true,
+                "referential": "R7"
+              },
+              {
+                "name": "BKU_ID",
+                "type": "unique_ID",
+                "is_identifier": true,
+                "referential": "R7"
+              },
+              {
+                "name": "TipeReferensi",
+                "type": "string",
+                "is_identifier": false
+              }
+            ]
+          },
+          {
+            "name": "Mahasiswa",
+            "key_letter": "MHS",
+            "class_number": 2,
+            "attributes": [
+              { "name": "MHS_ID", "type": "unique_ID", "is_identifier": true },
+              {
+                "name": "Person_ID",
+                "type": "unique_ID",
+                "is_identifier": false,
+                "referential": "R1"
+              },
+              {
+                "name": "Mentor_MHS_ID",
+                "type": "unique_ID",
+                "is_identifier": false,
+                "referential": "R8"
+              },
+              { "name": "NIM", "type": "string", "is_identifier": true },
+              {
+                "name": "Current_State",
+                "type": "state<MHS>",
+                "is_identifier": false
+              }
+            ],
+            "state_model": {
+              "lifecycle_type": "Instance",
+              "initial_state": "Aktif",
+              "states": [
+                {
+                  "name": "Aktif",
+                  "state_number": 1,
+                  "action_oal": "// State Aktif\nself.Current_State = \"Aktif\";"
+                },
+                {
+                  "name": "Cuti",
+                  "state_number": 2,
+                  "action_oal": "// Entry Action State Cuti\n// param.alasan diterima dari event\nLOG::LogInfo(message:\"Mahasiswa cuti: \" + param.alasan);\nself.Current_State = \"Cuti\";"
+                },
+                {
+                  "name": "Lulus",
+                  "state_number": 3,
+                  "action_oal": "// Entry Action State Lulus\nLOG::LogInfo(message:\"Mahasiswa telah lulus.\");\nself.Current_State = \"Lulus\";"
+                }
+              ],
+              "events": [
+                {
+                  "label": "MHS1",
+                  "meaning": "Ajukan Cuti",
+                  "parameters": [{ "name": "alasan", "type": "string" }]
+                },
+                {
+                  "label": "MHS2",
+                  "meaning": "Aktifkan Kembali",
+                  "parameters": [{ "name": "tanggalAktif", "type": "date" }]
+                },
+                {
+                  "label": "MHS3",
+                  "meaning": "Dinyatakan Lulus",
+                  "parameters": [{ "name": "tanggalLulus", "type": "date" }]
+                }
+              ],
+              "transitions": [
+                { "from_state": "Aktif", "event": "MHS1", "to_state": "Cuti" },
+                { "from_state": "Cuti", "event": "MHS2", "to_state": "Aktif" },
+                { "from_state": "Aktif", "event": "MHS3", "to_state": "Lulus" }
+              ]
+            }
+          },
+          {
+            "name": "Dosen",
+            "key_letter": "DSN",
+            "class_number": 3,
+            "attributes": [
+              { "name": "DSN_ID", "type": "unique_ID", "is_identifier": true },
+              {
+                "name": "Person_ID",
+                "type": "unique_ID",
+                "is_identifier": false,
+                "referential": "R1"
+              },
+              { "name": "NIP", "type": "string", "is_identifier": true },
+              {
+                "name": "Current_State",
+                "type": "state<DSN>",
+                "is_identifier": false
+              }
+            ]
+          },
+          {
+            "name": "MataKuliah",
+            "key_letter": "MK",
+            "class_number": 4,
+            "attributes": [
+              { "name": "MK_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "KodeMK", "type": "kode_mk", "is_identifier": false },
+              { "name": "NamaMK", "type": "string", "is_identifier": false },
+              { "name": "SKS", "type": "sks_type", "is_identifier": false },
+              {
+                "name": "DSN_ID",
+                "type": "unique_ID",
+                "is_identifier": false,
+                "referential": "R3"
+              }
+            ]
+          },
+          {
+            "name": "KRS",
+            "key_letter": "KRS",
+            "class_number": 5,
+            "type": "Association",
+            "attributes": [
+              {
+                "name": "MHS_ID",
+                "type": "unique_ID",
+                "is_identifier": true,
+                "referential": "R2"
+              },
+              {
+                "name": "MK_ID",
+                "type": "unique_ID",
+                "is_identifier": true,
+                "referential": "R2"
+              },
+              { "name": "Semester", "type": "string", "is_identifier": false },
+              { "name": "Nilai", "type": "string", "is_identifier": false }
+            ]
+          },
+          {
+            "name": "Ruangan",
+            "key_letter": "RNG",
+            "class_number": 6,
+            "attributes": [
+              { "name": "RNG_ID", "type": "unique_ID", "is_identifier": true },
+              {
+                "name": "NamaRuangan",
+                "type": "string",
+                "is_identifier": false
+              },
+              {
+                "name": "Kapasitas",
+                "type": "sks_type",
+                "is_identifier": false
+              }
+            ]
+          },
+          {
+            "name": "Jadwal",
+            "key_letter": "JDW",
+            "class_number": 7,
+            "attributes": [
+              { "name": "JDW_ID", "type": "unique_ID", "is_identifier": true },
+              {
+                "name": "MK_ID",
+                "type": "unique_ID",
+                "is_identifier": false,
+                "referential": "R4"
+              },
+              {
+                "name": "RNG_ID",
+                "type": "unique_ID",
+                "is_identifier": false,
+                "referential": "R5"
+              },
+              { "name": "Hari", "type": "string", "is_identifier": false },
+              { "name": "JamMulai", "type": "string", "is_identifier": false },
+              { "name": "JamSelesai", "type": "string", "is_identifier": false }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "label": "R1",
+            "type": "Subtype",
+            "description": "Person adalah supertype dari Mahasiswa dan Dosen (Generalization/Inheritance)",
+            "superclass": { "key_letter": "PRS" },
+            "subclasses": [{ "key_letter": "MHS" }, { "key_letter": "DSN" }]
+          },
+          {
+            "label": "R2",
+            "type": "Associative",
+            "description": "Mahasiswa mengambil Mata Kuliah (Many-to-Many Association diformalkan oleh KRS)",
+            "one_side": {
+              "key_letter": "MHS",
+              "phrase": "mengambil",
+              "mult": "Many",
+              "cond": "Optional"
+            },
+            "other_side": {
+              "key_letter": "MK",
+              "phrase": "diambil oleh",
+              "mult": "Many",
+              "cond": "Optional"
+            },
+            "association_class": { "key_letter": "KRS" }
+          },
+          {
+            "label": "R3",
+            "type": "Simple",
+            "description": "Dosen mengajar Mata Kuliah (One-to-Many Association)",
+            "one_side": {
+              "key_letter": "DSN",
+              "phrase": "mengajar",
+              "mult": "One",
+              "cond": "Optional"
+            },
+            "other_side": {
+              "key_letter": "MK",
+              "phrase": "diajar oleh",
+              "mult": "Many",
+              "cond": "Mandatory"
+            }
+          },
+          {
+            "label": "R4",
+            "type": "Simple",
+            "description": "Mata Kuliah memiliki Jadwal (One-to-Many Association)",
+            "one_side": {
+              "key_letter": "MK",
+              "phrase": "memiliki",
+              "mult": "One",
+              "cond": "Mandatory"
+            },
+            "other_side": {
+              "key_letter": "JDW",
+              "phrase": "untuk",
+              "mult": "Many",
+              "cond": "Optional"
+            }
+          },
+          {
+            "label": "R5",
+            "type": "Simple",
+            "description": "Ruangan digunakan untuk Jadwal (One-to-Many Association)",
+            "one_side": {
+              "key_letter": "RNG",
+              "phrase": "digunakan untuk",
+              "mult": "One",
+              "cond": "Mandatory"
+            },
+            "other_side": {
+              "key_letter": "JDW",
+              "phrase": "menggunakan",
+              "mult": "Many",
+              "cond": "Optional"
+            }
+          },
+          {
+            "label": "R6",
+            "type": "Composition",
+            "description": "Person memiliki Alamat (Composition - Alamat tidak dapat exist tanpa Person)",
+            "one_side": {
+              "key_letter": "PRS",
+              "phrase": "memiliki",
+              "mult": "One",
+              "cond": "Mandatory"
+            },
+            "other_side": {
+              "key_letter": "ALM",
+              "phrase": "dimiliki oleh",
+              "mult": "One",
+              "cond": "Mandatory"
+            }
+          },
+          {
+            "label": "R7",
+            "type": "Aggregation",
+            "description": "Mata Kuliah menggunakan Buku sebagai referensi (Aggregation - Buku dapat exist independen)",
+            "one_side": {
+              "key_letter": "MK",
+              "phrase": "menggunakan",
+              "mult": "Many",
+              "cond": "Optional"
+            },
+            "other_side": {
+              "key_letter": "BKU",
+              "phrase": "digunakan oleh",
+              "mult": "Many",
+              "cond": "Optional"
+            },
+            "association_class": { "key_letter": "RFB" }
+          },
+          {
+            "label": "R8",
+            "type": "Reflexive",
+            "description": "Mahasiswa Senior membimbing Mahasiswa Junior (Self-referencing/Recursive Mentoring)",
+            "one_side": {
+              "key_letter": "MHS",
+              "phrase": "membimbing",
+              "mult": "One",
+              "cond": "Optional",
+              "role": "Mentor"
+            },
+            "other_side": {
+              "key_letter": "MHS",
+              "phrase": "dibimbing oleh",
+              "mult": "Many",
+              "cond": "Optional",
+              "role": "Mentee"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
