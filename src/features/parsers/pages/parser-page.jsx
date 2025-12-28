@@ -10,7 +10,6 @@ import { useTheme } from "@/components/theme-provider";
 import { XtUMLParser, getLineContext } from "../utils/xtuml-validator";
 import ErrorDisplay from "../components/ErrorDisplay";
 import { exampleJSON } from "@/constants/example-json";
-import { toast } from "sonner";
 import { getEditorTheme } from "@/lib/get-editor-theme";
 
 export default function ParsingPage() {
@@ -95,8 +94,25 @@ export default function ParsingPage() {
       }, 100);
     } catch (error) {
       console.error("Parse Error:", error);
-      toast.error(`Format JSON tidak valid dengan detail error: ${error.message}`);
+      setErrors([
+        {
+          type: "JSON_PARSE_ERROR",
+          severity: "error",
+          message: "Format JSON tidak valid",
+          context: `${error.message}`,
+          suggestion: "Periksa kembali sintaks JSON Anda (kurung kurawal, koma, tanda kutip, dll)",
+          phase: "Parsing",
+        },
+      ]);
       setIsValid(false);
+
+      // Auto scroll to results untuk menampilkan error
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
     } finally {
       setIsParsing(false);
     }
