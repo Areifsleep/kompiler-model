@@ -1,6 +1,6 @@
 // Import dari file hasil generate Anda
 // Pastikan nama filenya sesuai (misal: LibrarySystem)
-import { Anggota, Buku, Peminjaman } from "./models/output-lib.ts";
+import { Anggota, Buku, Peminjaman } from "../backup/output-lib.js";
 
 // ==========================================
 // HELPER: Custom Assertion
@@ -47,14 +47,7 @@ try {
   const tglPinjam = new Date("2025-01-01");
   const tglJatuhTempo = new Date("2025-01-04");
 
-  const pnj = new Peminjaman(
-    "PNJ-001",
-    "Dipinjam",
-    tglPinjam,
-    tglJatuhTempo,
-    "Dipinjam",
-    0
-  );
+  const pnj = new Peminjaman("PNJ-001", "Dipinjam", tglPinjam, tglJatuhTempo, "Dipinjam", 0);
 
   // --- PENTING: Menghubungkan Relasi (R10) ---
   // Di xtUML, relasi harus konsisten dua arah
@@ -68,31 +61,15 @@ try {
   bukuHP.addPeminjaman(pnj);
 
   // Assert Links
-  assert(
-    pnj.getAnggota()?.getNama() === "Siti Aminah",
-    "Peminjaman terhubung ke Siti"
-  );
-  assert(
-    pnj.getBuku()?.getJudul() === "Harry Potter",
-    "Peminjaman terhubung ke Buku HP"
-  );
-  assert(
-    siti.getPeminjamanList().length === 1,
-    "List Peminjaman Siti bertambah"
-  );
+  assert(pnj.getAnggota()?.getNama() === "Siti Aminah", "Peminjaman terhubung ke Siti");
+  assert(pnj.getBuku()?.getJudul() === "Harry Potter", "Peminjaman terhubung ke Buku HP");
+  assert(siti.getPeminjamanList().length === 1, "List Peminjaman Siti bertambah");
 
   // ---------------------------------------------------
   // 3. PENGEMBALIAN TEPAT WAKTU (Tidak Ada Denda)
   // ---------------------------------------------------
   // Kita buat simulasi peminjaman lain untuk tes tepat waktu
-  const pnjTepat = new Peminjaman(
-    "PNJ-002",
-    "Dipinjam",
-    tglPinjam,
-    tglJatuhTempo,
-    "Dipinjam",
-    0
-  );
+  const pnjTepat = new Peminjaman("PNJ-002", "Dipinjam", tglPinjam, tglJatuhTempo, "Dipinjam", 0);
   pnjTepat.setAnggota(siti); // Link minimal untuk OAL jalan
 
   header("SCENARIO 3: Pengembalian Tepat Waktu");
@@ -100,14 +77,8 @@ try {
   // Dikembalikan tanggal 3 Jan (Sebelum jatuh tempo tgl 4)
   pnjTepat.kembalikanBuku({ tgl_kembali: new Date("2025-01-03") });
 
-  assert(
-    pnjTepat.getDenda() === 0,
-    "Tidak ada denda untuk pengembalian tepat waktu"
-  );
-  assert(
-    pnjTepat.getStatus() === "Dikembalikan",
-    "Status berubah jadi Dikembalikan"
-  );
+  assert(pnjTepat.getDenda() === 0, "Tidak ada denda untuk pengembalian tepat waktu");
+  assert(pnjTepat.getStatus() === "Dikembalikan", "Status berubah jadi Dikembalikan");
 
   // ---------------------------------------------------
   // 4. PENGEMBALIAN TERLAMBAT (Core Logic Test)
@@ -129,25 +100,16 @@ try {
   // --- ASSERTIONS ---
 
   // 1. Cek State & Status
-  assert(
-    pnj.getCurrent_State() === "Dikembalikan",
-    "State State berubah ke 'Dikembalikan'"
-  );
+  assert(pnj.getCurrent_State() === "Dikembalikan", "State State berubah ke 'Dikembalikan'");
   assert(pnj.getStatus() === "Dikembalikan", "Status String berubah");
 
   // 2. Cek Perhitungan Denda di Peminjaman
   // Rumus: 2 hari * 1000 = 2000
-  assert(
-    pnj.getDenda() === 2000,
-    `Denda Transaksi benar (Exp: 2000, Got: ${pnj.getDenda()})`
-  );
+  assert(pnj.getDenda() === 2000, `Denda Transaksi benar (Exp: 2000, Got: ${pnj.getDenda()})`);
 
   // 3. Cek Update Data Anggota (Siti)
   // OAL Logic: agt.Total_Denda = agt.Total_Denda + total_denda
-  assert(
-    siti.getTotal_Denda() === 2000,
-    `Total Denda Siti terupdate (Exp: 2000, Got: ${siti.getTotal_Denda()})`
-  );
+  assert(siti.getTotal_Denda() === 2000, `Total Denda Siti terupdate (Exp: 2000, Got: ${siti.getTotal_Denda()})`);
 
   // ---------------------------------------------------
   // 5. GUARD CHECK (Invalid State)
@@ -159,10 +121,7 @@ try {
     pnj.kembalikanBuku({ tgl_kembali: new Date() });
     assert(false, "Seharusnya Error, tapi malah lolos");
   } catch (e) {
-    assert(
-      true,
-      "Berhasil menangkap Error: Buku sudah dikembalikan tidak bisa dikembalikan lagi."
-    );
+    assert(true, "Berhasil menangkap Error: Buku sudah dikembalikan tidak bisa dikembalikan lagi.");
   }
 
   console.log("\n🎉 SEMUA TEST LULUS.");

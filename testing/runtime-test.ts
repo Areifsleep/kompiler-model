@@ -1,6 +1,6 @@
 // Import semua class dari file hasil generate Anda
 // Asumsi nama file generate-nya adalah "SistemAkademik.ts"
-import { Mahasiswa, MataKuliah, KRS } from "./models/output-oal-complete.ts";
+import { Mahasiswa, MataKuliah, KRS } from "../backup/output-oal-complete.js";
 
 // ==========================================
 // HELPER: Fungsi Assert Sederhana (Pengganti Jest)
@@ -83,14 +83,8 @@ try {
 
   // Verifikasi Link
   assert(budi.getKRSList().length === 3, "Budi memiliki 3 KRS di list");
-  assert(
-    krs1.getMahasiswa()?.getNama() === "Budi Santoso",
-    "KRS1 terhubung balik ke Budi"
-  );
-  assert(
-    krs1.getMataKuliah()?.getNama() === "Pemrograman Web",
-    "KRS1 terhubung ke MK Web"
-  );
+  assert(krs1.getMahasiswa()?.getNama() === "Budi Santoso", "KRS1 terhubung balik ke Budi");
+  assert(krs1.getMataKuliah()?.getNama() === "Pemrograman Web", "KRS1 terhubung ke MK Web");
 
   // ---------------------------------------------------------
   // 3. PENGUJIAN LOGIKA CUTI (State Transition)
@@ -106,10 +100,7 @@ try {
   assert(budi.getCurrent_State() === "Cuti", "State berubah menjadi 'Cuti'");
 
   // Assert Action Language (Hitung SKS) berjalan
-  assert(
-    budi.getTotal_SKS() === 8,
-    `Total SKS terhitung benar (Expected: 8, Got: ${budi.getTotal_SKS()})`
-  );
+  assert(budi.getTotal_SKS() === 8, `Total SKS terhitung benar (Expected: 8, Got: ${budi.getTotal_SKS()})`);
 
   // Test Guard: Coba cuti lagi (Harusnya Error)
   try {
@@ -128,10 +119,7 @@ try {
   budi.aktifkanKembali({ tanggalAktif: new Date() });
 
   assert(budi.getCurrent_State() === "Aktif", "State kembali menjadi 'Aktif'");
-  assert(
-    budi.getTotal_SKS() === 0,
-    "Total SKS di-reset jadi 0 saat aktif kembali"
-  );
+  assert(budi.getTotal_SKS() === 0, "Total SKS di-reset jadi 0 saat aktif kembali");
 
   // ---------------------------------------------------------
   // 5. PENGUJIAN KELULUSAN & IPK (Complex Logic)
@@ -164,10 +152,7 @@ try {
 
   // Assert Kalkulasi IPK
   const expectedIPK = 3.625;
-  assert(
-    budi.getIPK() === expectedIPK,
-    `IPK terhitung akurat (Expected: ${expectedIPK}, Got: ${budi.getIPK()})`
-  );
+  assert(budi.getIPK() === expectedIPK, `IPK terhitung akurat (Expected: ${expectedIPK}, Got: ${budi.getIPK()})`);
 
   // Assert Total SKS Lulus
   assert(budi.getTotal_SKS() === 8, "Total SKS Lulus tersimpan benar");
