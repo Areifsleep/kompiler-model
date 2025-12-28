@@ -17,7 +17,10 @@ export class OALTransformer {
 
     let transformed = oal;
 
-    // Apply transformations in order
+    // STEP 1: Pre-scan to detect all variable names that need 'let' (before formatting changes)
+    const variablesToDeclare = this.detectVariableAssignments(oal);
+
+    // STEP 2: Apply transformations in order
     transformed = this.transformBridgeCalls(transformed);
     transformed = this.transformCreateInstance(transformed);
     transformed = this.transformSelectStatements(transformed);
@@ -28,7 +31,9 @@ export class OALTransformer {
     transformed = this.transformOperators(transformed);
     transformed = this.transformEventParameters(transformed);
     transformed = this.transformSelfKeyword(transformed); // NEW: self → this
-    transformed = this.transformVariableDeclarations(transformed); // NEW: add 'let'
+    
+    // STEP 3: Add 'let' declarations based on pre-scanned variables
+    transformed = this.addVariableDeclarations(transformed, variablesToDeclare);
 
     // Format with proper indentation
     return this.formatOutput(transformed);
@@ -296,6 +301,76 @@ export class OALTransformer {
     transformed = transformed.replace(/\bself\b(?!->)/g, "this");
 
     return transformed;
+  }
+
+  /**
+   * Pre-scan OAL to detect all variable assignments (before formatting changes)
+   * This captures variables like: selisih = TIM::get_days_diff(...)
+   * Before they get transformed to multi-line format
+   */
+  detectVariableAssignments(oal) {
+    const variablesToDeclare = new Set();
+    const lines = oal.split('\n');
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Match: varname = expression (single line, before bridge formatting)
+      // Exclude: this.x, obj.x, let x, const x, var x, params.x
+      const assignmentMatch = trimmed.match(/^([a-zA-Z_]\w*)\s*=\s*.+/);
+      
+      if (assignmentMatch) {
+        const varName = assignmentMatch[1];
+        
+        // Skip if it's a property access or already declared
+        const isPropertyOrDeclared = line.match(/\b(let|const|var|this|params)\b/) || 
+                                     trimmed.includes('.') && trimmed.indexOf('.') < trimmed.indexOf('=');
+        
+        if (!isPropertyOrDeclared) {
+          variablesToDeclare.add(varName);
+        }
+      }
+    }
+    
+    return variablesToDeclare;
+  }
+
+  /**
+   * Add 'let' declarations to variables that were detected in pre-scan
+   * Works with multi-line assignments after bridge call formatting
+   */
+  addVariableDeclarations(oal, variablesToDeclare) {
+    if (variablesToDeclare.size === 0) {
+      return oal;
+    }
+    
+    const lines = oal.split('\n');
+    const transformed = [];
+    const declaredVars = new Set();
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Check if this line starts with a variable assignment
+      const assignmentMatch = trimmed.match(/^([a-zA-Z_]\w*)\s*=/);
+      
+      if (assignmentMatch) {
+        const varName = assignmentMatch[1];
+        
+        // If this variable needs declaration and hasn't been declared yet
+        if (variablesToDeclare.has(varName) && !declaredVars.has(varName)) {
+          declaredVars.add(varName);
+          // Add 'let' to the line
+          transformed.push(line.replace(/^(\s*)([a-zA-Z_]\w*\s*=)/, '$1let $2'));
+        } else {
+          transformed.push(line);
+        }
+      } else {
+        transformed.push(line);
+      }
+    }
+    
+    return transformed.join('\n');
   }
 
   /**

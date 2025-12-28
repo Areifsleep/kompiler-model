@@ -80,17 +80,28 @@ export class RuntimeShimGenerator {
     }
     code += `   */\n`;
 
+    // Generate implementation first to check if params is used
+    const implementation = this.generateBridgeImplementation(
+      bridge,
+      eeKeyLetter,
+      returnType
+    );
+    const paramsUsed = implementation.includes("params.");
+
     // Special handling for TIM methods - make params optional with any type
     if (eeKeyLetter === "TIM") {
-      code += `  static ${bridge.name}(params?: any)`;
+      // Use _params if not used in body, params if used
+      const paramName = paramsUsed ? "params" : "_params";
+      code += `  static ${bridge.name}(${paramName}?: any)`;
     } else {
-      code += `  static ${bridge.name}(params: { ${params} })`;
+      const paramName = paramsUsed ? "params" : "_params";
+      code += `  static ${bridge.name}(${paramName}: { ${params} })`;
     }
 
     code += `: ${returnType} {\n`;
 
-    // Generate implementation
-    code += this.generateBridgeImplementation(bridge, eeKeyLetter, returnType);
+    // Add implementation
+    code += implementation;
 
     code += `  }\n\n`;
     return code;
@@ -122,6 +133,13 @@ export class RuntimeShimGenerator {
         code += `    return timerId as unknown as number;\n`;
       } else if (bridge.name === "current_time") {
         code += `    return new Date();\n`;
+      } else if (bridge.name === "get_days_diff") {
+        code += `    // Calculate difference in days between two dates\n`;
+        code += `    const date1 = new Date(params.date1);\n`;
+        code += `    const date2 = new Date(params.date2);\n`;
+        code += `    const diffTime = Math.abs(date2.getTime() - date1.getTime());\n`;
+        code += `    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));\n`;
+        code += `    return date2 > date1 ? diffDays : -diffDays;\n`;
       } else if (bridge.name === "timer_cancel") {
         code += `    clearTimeout(params.timer_id as any);\n`;
         code += `    console.log(\`[TIM]: Timer \${params.timer_id} cancelled\`);\n`;

@@ -59,8 +59,16 @@ export class TypeScriptTranslator {
       }
     });
 
+    // Collect all data_types for domain type preservation
+    const allDataTypes = [];
+    this.subsystems.forEach((subsystem) => {
+      if (subsystem.data_types) {
+        allDataTypes.push(...subsystem.data_types);
+      }
+    });
+
     // Initialize components after parsing
-    this.typeMapper = new TypeMapper(this.classes);
+    this.typeMapper = new TypeMapper(this.classes, allDataTypes);
 
     // Scan all OAL code to detect which External Entities are used
     const eeDetector = new ExternalEntityDetector(
@@ -89,21 +97,31 @@ export class TypeScriptTranslator {
 
   generateTypeDefinitions() {
     let code = "// Type Definitions\n";
-    code += "type UniqueID = string;\n";
-    code += "type inst_ref<T> = T; // Instance reference type for events\n";
+    code += "type inst_ref<T> = T | null; // Instance reference (nullable)\n";
+    code += "type inst_ref_set<T> = T[]; // Instance reference set (array)\n";
 
     // Collect all custom types from data_types
     const customTypes = new Set();
     this.subsystems.forEach((subsystem) => {
       if (subsystem.data_types) {
         subsystem.data_types.forEach((dt) => {
-          if (
-            dt.core_type &&
-            dt.name !== dt.core_type &&
-            dt.name !== "unique_ID"
-          ) {
-            const tsType = this.mapCoreTypeToTS(dt.core_type);
-            customTypes.add(`type ${dt.name} = ${tsType};`);
+          if (dt.core_type) {
+            // Skip state<X> types - they're generated separately below
+            if (dt.name.startsWith("state<")) {
+              return;
+            }
+
+            // For unique_ID, always define it
+            if (dt.name === "unique_ID") {
+              customTypes.add(`type unique_ID = string;`);
+              return;
+            }
+
+            // For other types, only define if name != core_type (it's an alias)
+            if (dt.name !== dt.core_type) {
+              const tsType = this.mapCoreTypeToTS(dt.core_type);
+              customTypes.add(`type ${dt.name} = ${tsType};`);
+            }
           }
         });
       }
@@ -314,7 +332,30 @@ export class TypeScriptTranslator {
     // Initialize navigation properties
     const navProps = this.getNavigationProperties(cls.key_letter);
     navProps.forEach((prop) => {
-      const initialValue = prop.type.includes("[]") ? "[]" : "null";
+      // Check for inst_ref_set<T> or T[] patterns
+      const isSet =
+        prop.type.startsWith("inst_ref_set<") || prop.type.includes("[]");
+
+      // CRITICAL FIX: Check if this is a Subtype relationship navigation to superclass
+      let initialValue = isSet ? "[]" : "null";
+
+      // Find if this property represents a subtype-to-superclass relationship
+      const subtypeRel = Array.from(this.relationships.values()).find(
+        (rel) =>
+          rel.type === "Subtype" &&
+          rel.subclasses?.some((sub) => sub.key_letter === cls.key_letter) &&
+          rel.superclass &&
+          this.toCamelCase(
+            this.classes.get(rel.superclass.key_letter)?.name
+          ) === prop.name
+      );
+
+      // If this class is a subtype and this property navigates to superclass,
+      // initialize with 'this' because subtype IS-A supertype (inheritance)
+      if (subtypeRel) {
+        initialValue = "this";
+      }
+
       code += `    this.${prop.name} = ${initialValue};\n`;
     });
 
@@ -722,8 +763,8 @@ export class TypeScriptTranslator {
             props.push({
               name: this.toCamelCase(targetClass.name) + (isMany ? "List" : ""),
               type: isMany
-                ? `${targetClass.name}[]`
-                : `${targetClass.name} | null`,
+                ? `inst_ref_set<${targetClass.name}>`
+                : `inst_ref<${targetClass.name}>`,
             });
           }
         } else if (rel.other_side?.key_letter === keyLetter) {
@@ -733,8 +774,8 @@ export class TypeScriptTranslator {
             props.push({
               name: this.toCamelCase(targetClass.name) + (isMany ? "List" : ""),
               type: isMany
-                ? `${targetClass.name}[]`
-                : `${targetClass.name} | null`,
+                ? `inst_ref_set<${targetClass.name}>`
+                : `inst_ref<${targetClass.name}>`,
             });
           }
         }
@@ -747,7 +788,7 @@ export class TypeScriptTranslator {
         ) {
           props.push({
             name: this.toCamelCase(assocClass.name) + "List",
-            type: `${assocClass.name}[]`,
+            type: `inst_ref_set<${assocClass.name}>`,
           });
         }
 
@@ -759,14 +800,14 @@ export class TypeScriptTranslator {
           if (oneSideClass) {
             props.push({
               name: this.toCamelCase(oneSideClass.name),
-              type: `${oneSideClass.name} | null`,
+              type: `inst_ref<${oneSideClass.name}>`,
             });
           }
 
           if (otherSideClass) {
             props.push({
               name: this.toCamelCase(otherSideClass.name),
-              type: `${otherSideClass.name} | null`,
+              type: `inst_ref<${otherSideClass.name}>`,
             });
           }
         }
@@ -782,14 +823,14 @@ export class TypeScriptTranslator {
         if (oneSideMult === "One") {
           props.push({
             name: this.toCamelCase(oneSideRole),
-            type: `${this.classes.get(keyLetter).name} | null`,
+            type: `inst_ref<${this.classes.get(keyLetter).name}>`,
           });
         }
 
         if (otherSideMult === "Many") {
           props.push({
             name: this.toCamelCase(otherSideRole),
-            type: `${this.classes.get(keyLetter).name}[]`,
+            type: `inst_ref_set<${this.classes.get(keyLetter).name}>`,
           });
         }
       } else if (rel.type === "Subtype") {
