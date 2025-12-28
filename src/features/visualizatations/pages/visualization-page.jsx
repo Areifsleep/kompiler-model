@@ -159,7 +159,7 @@ export default function VisualizationPage() {
               source: rel.superclass.key_letter,
               target: sub.key_letter,
               label: `${rel.label} (Inheritance)`,
-              type: "default",
+              type: "smoothstep",
               animated: false,
               markerEnd: {
                 type: MarkerType.ArrowClosed,
@@ -194,7 +194,7 @@ export default function VisualizationPage() {
             id: `${oneSide.key_letter}-${assocClass.key_letter}`,
             source: oneSide.key_letter,
             target: assocClass.key_letter,
-            type: "default",
+            type: "smoothstep",
             label: `${rel.label} (M:N)`,
             style: {
               stroke: "#f59e0b",
@@ -217,7 +217,7 @@ export default function VisualizationPage() {
             id: `${assocClass.key_letter}-${otherSide.key_letter}`,
             source: assocClass.key_letter,
             target: otherSide.key_letter,
-            type: "default",
+            type: "smoothstep",
             style: {
               stroke: "#f59e0b",
               strokeWidth: 2,
@@ -237,7 +237,7 @@ export default function VisualizationPage() {
               source: sourceKL,
               target: targetKL,
               label: `${rel.label} (1:N)`,
-              type: "default",
+              type: "smoothstep",
               markerEnd: {
                 type: MarkerType.Arrow,
                 width: 20,
@@ -276,7 +276,7 @@ export default function VisualizationPage() {
               source: sourceKL,
               target: targetKL,
               label: `${rel.label} (Composition)`,
-              type: "default",
+              type: "smoothstep",
               markerEnd: {
                 type: MarkerType.ArrowClosed,
                 width: 22,
@@ -314,7 +314,7 @@ export default function VisualizationPage() {
               source: oneSide.key_letter,
               target: assocClass.key_letter,
               label: `${rel.label} (Aggregation)`,
-              type: "default",
+              type: "smoothstep",
               style: {
                 stroke: "#059669",
                 strokeWidth: 2,
@@ -337,7 +337,7 @@ export default function VisualizationPage() {
               id: `${assocClass.key_letter}-${otherSide.key_letter}-${rel.label}`,
               source: assocClass.key_letter,
               target: otherSide.key_letter,
-              type: "default",
+              type: "smoothstep",
               style: {
                 stroke: "#059669",
                 strokeWidth: 2,
@@ -355,7 +355,7 @@ export default function VisualizationPage() {
               source: oneSide.key_letter,
               target: oneSide.key_letter,
               label: `${rel.label} (Reflexive)`,
-              type: "default",
+              type: "smoothstep",
               markerEnd: {
                 type: MarkerType.Arrow,
                 width: 18,
