@@ -1,0 +1,30 @@
+{
+  "system_model": {
+    "system_name": "Test Rule 9 Violation",
+    "version": "1.0.0",
+    "subsystems": [
+      {
+        "name": "Test Subsystem",
+        "prefix": "TST",
+        "classes": [
+          {
+            "name": "InvalidClass",
+            "key_letter": "INV",
+            "class_number": 1,
+            "attributes": [
+              {
+                "name": "Name",
+                "type": "string"
+              },
+              {
+                "name": "Email",
+                "type": "string"
+              }
+            ]
+          }
+        ],
+        "relationships": []
+      }
+    ]
+  }
+}

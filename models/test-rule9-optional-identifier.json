@@ -1,0 +1,64 @@
+{
+  "system_model": {
+    "system_name": "Test Rule 9 Fix",
+    "version": "1.0.0",
+    "subsystems": [
+      {
+        "name": "Test Subsystem",
+        "prefix": "TST",
+        "classes": [
+          {
+            "name": "Person",
+            "key_letter": "PRS",
+            "class_number": 1,
+            "attributes": [
+              {
+                "name": "Person_ID",
+                "type": "unique_ID",
+                "is_identifier": true
+              },
+              {
+                "name": "Name",
+                "type": "string"
+              },
+              {
+                "name": "Email",
+                "type": "string"
+              }
+            ]
+          },
+          {
+            "name": "Student",
+            "key_letter": "STD",
+            "class_number": 2,
+            "attributes": [
+              {
+                "name": "Student_ID",
+                "type": "unique_ID",
+                "is_identifier": true
+              },
+              {
+                "name": "Person_ID",
+                "type": "unique_ID",
+                "referential": "R1"
+              },
+              {
+                "name": "StudentNumber",
+                "type": "string"
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "label": "R1",
+            "type": "Subtype",
+            "description": "Person is supertype of Student",
+            "superclass": { "key_letter": "PRS" },
+            "subclasses": [{ "key_letter": "STD" }]
+          }
+        ]
+      }
+    ]
+  }
+}

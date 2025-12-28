@@ -15,14 +15,25 @@ export class SchemaValidator {
   validate(modelJson) {
     // Check root structure
     if (typeof modelJson !== "object" || modelJson === null) {
-      this.errorManager.addError("Root must be a valid JSON object", "$", "Ensure the input is valid JSON and starts with '{'", "error", 1);
+      this.errorManager.addError(
+        "Root must be a valid JSON object",
+        "$",
+        "Ensure the input is valid JSON and starts with '{'",
+        "error",
+        1
+      );
       return;
     }
+
+    // Normalize model before validation (set default values)
+    this.normalizeModel(modelJson);
 
     // Check for unknown keys at root
     const rootKeys = Object.keys(modelJson);
     const allowedRootKeys = ["system_model"];
-    const unknownRootKeys = rootKeys.filter((k) => !allowedRootKeys.includes(k));
+    const unknownRootKeys = rootKeys.filter(
+      (k) => !allowedRootKeys.includes(k)
+    );
 
     if (unknownRootKeys.length > 0) {
       this.errorManager.addError(
@@ -36,11 +47,21 @@ export class SchemaValidator {
 
     // Validate system_model
     if (!modelJson.system_model) {
-      this.errorManager.addError("Missing required root key 'system_model'", "$", "Add 'system_model' object at root level", "error", 1);
+      this.errorManager.addError(
+        "Missing required root key 'system_model'",
+        "$",
+        "Add 'system_model' object at root level",
+        "error",
+        1
+      );
       return;
     }
 
-    this.validateObject(modelJson.system_model, XTUML_SCHEMA.system_model, "$.system_model");
+    this.validateObject(
+      modelJson.system_model,
+      XTUML_SCHEMA.system_model,
+      "$.system_model"
+    );
 
     // Validate subsystems
     if (!modelJson.system_model.subsystems) {
@@ -65,7 +86,13 @@ export class SchemaValidator {
 
   validateObject(obj, schema, path) {
     if (typeof obj !== "object" || obj === null) {
-      this.errorManager.addError(`Expected object at '${path}'`, path, "Ensure this field is a valid JSON object", "error", 1);
+      this.errorManager.addError(
+        `Expected object at '${path}'`,
+        path,
+        "Ensure this field is a valid JSON object",
+        "error",
+        1
+      );
       return;
     }
 
@@ -86,7 +113,11 @@ export class SchemaValidator {
     Object.keys(obj).forEach((field) => {
       const expectedType = schema.types[field];
 
-      if (!expectedType && !schema.optional.includes(field) && !schema.required.includes(field)) {
+      if (
+        !expectedType &&
+        !schema.optional.includes(field) &&
+        !schema.required.includes(field)
+      ) {
         this.errorManager.addError(
           `Unknown field '${field}'`,
           `${path}.${field}`,
@@ -108,15 +139,33 @@ export class SchemaValidator {
 
     if (expectedType === "integer") {
       if (typeof value !== "number" || !Number.isInteger(value)) {
-        this.errorManager.addError(`Expected integer, got ${actualType}`, path, "Use an integer value (e.g., 1, 2, 3)", "error", 1);
+        this.errorManager.addError(
+          `Expected integer, got ${actualType}`,
+          path,
+          "Use an integer value (e.g., 1, 2, 3)",
+          "error",
+          1
+        );
       }
     } else if (expectedType === "string|object") {
       // Allow either string or object
       if (actualType !== "string" && actualType !== "object") {
-        this.errorManager.addError(`Expected string or object, got ${actualType}`, path, `Use either a string (e.g., "R1") or an object`, "error", 1);
+        this.errorManager.addError(
+          `Expected string or object, got ${actualType}`,
+          path,
+          `Use either a string (e.g., "R1") or an object`,
+          "error",
+          1
+        );
       }
     } else if (expectedType !== "any" && actualType !== expectedType) {
-      this.errorManager.addError(`Expected ${expectedType}, got ${actualType}`, path, `Change to ${expectedType} type`, "error", 1);
+      this.errorManager.addError(
+        `Expected ${expectedType}, got ${actualType}`,
+        path,
+        `Change to ${expectedType} type`,
+        "error",
+        1
+      );
     }
   }
 
@@ -174,5 +223,29 @@ export class SchemaValidator {
     const path = `$.system_model.subsystems[${subsysIdx}].classes[${clsIdx}].state_model`;
 
     this.validateObject(stateModel, XTUML_SCHEMA.state_model, path);
+  }
+
+  /**
+   * Normalize model by setting default values for optional fields
+   * This ensures backward compatibility and reduces JSON verbosity
+   */
+  normalizeModel(modelJson) {
+    if (!modelJson.system_model?.subsystems) return;
+
+    modelJson.system_model.subsystems.forEach((subsystem) => {
+      if (!subsystem.classes) return;
+
+      subsystem.classes.forEach((cls) => {
+        if (!cls.attributes) return;
+
+        // Rule 9: Set default is_identifier = false if not specified
+        // This makes the field optional while maintaining validation logic
+        cls.attributes.forEach((attr) => {
+          if (attr.is_identifier === undefined) {
+            attr.is_identifier = false;
+          }
+        });
+      });
+    });
   }
 }

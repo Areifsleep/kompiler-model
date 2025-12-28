@@ -1,3 +1,10 @@
+import { TypeMapper } from "./transformers/type-mapper.js";
+import { OALTransformer } from "./transformers/oal-transformer.js";
+import { ExternalEntityDetector } from "./analyzers/external-entity-detector.js";
+import { ClassOrderAnalyzer } from "./analyzers/class-order-analyzer.js";
+import { HeaderGenerator } from "./generators/header-generator.js";
+import { RuntimeShimGenerator } from "./generators/runtime-shim-generator.js";
+
 /**
  * TypeScript Code Generator from xtUML Model
  * Generates clean TypeScript code without unnecessary comments and examples
@@ -8,7 +15,13 @@ export class TypeScriptTranslator {
     this.model = modelJson;
     this.classes = new Map();
     this.relationships = new Map();
+    this.externalEntities = new Map();
+    this.usedExternalEntities = new Set(); // Track which EEs are actually used
     this.subsystems = [];
+
+    // Initialize components
+    this.typeMapper = null;
+    this.headerGenerator = new HeaderGenerator();
   }
 
   translate() {
@@ -24,6 +37,13 @@ export class TypeScriptTranslator {
     this.model.system_model.subsystems.forEach((subsystem) => {
       this.subsystems.push(subsystem);
 
+      // Parse external entities (Rule 20 Shlaer-Mellor)
+      if (subsystem.external_entities) {
+        subsystem.external_entities.forEach((ee) => {
+          this.externalEntities.set(ee.key_letter, ee);
+        });
+      }
+
       // Parse classes
       if (subsystem.classes) {
         subsystem.classes.forEach((cls) => {
@@ -38,39 +58,50 @@ export class TypeScriptTranslator {
         });
       }
     });
+
+    // Initialize components after parsing
+    this.typeMapper = new TypeMapper(this.classes);
+
+    // Scan all OAL code to detect which External Entities are used
+    const eeDetector = new ExternalEntityDetector(
+      this.classes,
+      this.externalEntities
+    );
+    this.usedExternalEntities = eeDetector.detect();
   }
 
   generateCode() {
-    let code = this.generateHeader();
+    let code = this.headerGenerator.generate(this.model);
+    code += this.generateRuntimeShims();
     code += this.generateTypeDefinitions();
     code += this.generateClasses();
     return code;
   }
 
-  generateHeader() {
-    const systemName = this.model.system_model.system_name || "System";
-    const version = this.model.system_model.version || "1.0.0";
-
-    return `// ============================================================================
-// Generated TypeScript Code
-// System: ${systemName}
-// Version: ${version}
-// Generated: ${new Date().toISOString()}
-// ============================================================================
-
-`;
+  generateRuntimeShims() {
+    const shimGenerator = new RuntimeShimGenerator(
+      this.externalEntities,
+      this.usedExternalEntities,
+      this.typeMapper
+    );
+    return shimGenerator.generate();
   }
 
   generateTypeDefinitions() {
     let code = "// Type Definitions\n";
     code += "type UniqueID = string;\n";
+    code += "type inst_ref<T> = T; // Instance reference type for events\n";
 
     // Collect all custom types from data_types
     const customTypes = new Set();
     this.subsystems.forEach((subsystem) => {
       if (subsystem.data_types) {
         subsystem.data_types.forEach((dt) => {
-          if (dt.core_type && dt.name !== dt.core_type && dt.name !== "unique_ID") {
+          if (
+            dt.core_type &&
+            dt.name !== dt.core_type &&
+            dt.name !== "unique_ID"
+          ) {
             const tsType = this.mapCoreTypeToTS(dt.core_type);
             customTypes.add(`type ${dt.name} = ${tsType};`);
           }
@@ -115,7 +146,11 @@ export class TypeScriptTranslator {
   generateClasses() {
     let code = "";
     const processedClasses = new Set();
-    const classOrder = this.determineClassOrder();
+    const classOrderAnalyzer = new ClassOrderAnalyzer(
+      this.classes,
+      this.relationships
+    );
+    const classOrder = classOrderAnalyzer.determine();
 
     classOrder.forEach((keyLetter) => {
       const cls = this.classes.get(keyLetter);
@@ -129,48 +164,8 @@ export class TypeScriptTranslator {
   }
 
   determineClassOrder() {
-    // Order: Independent -> Base -> Subtypes -> Others
-    const order = [];
-    const subtypes = new Set();
-
-    // Find subtypes from R1 (generalization)
-    this.relationships.forEach((rel) => {
-      if (rel.type === "Subtype" && rel.subclasses) {
-        rel.subclasses.forEach((sc) => subtypes.add(sc.key_letter));
-      }
-    });
-
-    // First: classes without foreign keys (independent)
-    this.classes.forEach((cls, kl) => {
-      if (!subtypes.has(kl) && !this.hasForeignKeys(cls)) {
-        order.push(kl);
-      }
-    });
-
-    // Second: base classes (supertypes)
-    this.relationships.forEach((rel) => {
-      if (rel.type === "Subtype" && rel.superclass) {
-        if (!order.includes(rel.superclass.key_letter)) {
-          order.push(rel.superclass.key_letter);
-        }
-      }
-    });
-
-    // Third: subtypes
-    subtypes.forEach((kl) => {
-      if (!order.includes(kl)) {
-        order.push(kl);
-      }
-    });
-
-    // Finally: remaining classes
-    this.classes.forEach((cls, kl) => {
-      if (!order.includes(kl)) {
-        order.push(kl);
-      }
-    });
-
-    return order;
+    const analyzer = new ClassOrderAnalyzer(this.classes, this.relationships);
+    return analyzer.determine();
   }
 
   hasForeignKeys(cls) {
@@ -214,16 +209,27 @@ export class TypeScriptTranslator {
 
     if (cls.attributes) {
       cls.attributes.forEach((attr) => {
+        // Skip referential attributes that point to supertype (they're inherited)
+        if (hasSuper && attr.referential) {
+          const rel = Array.from(this.relationships.values()).find(
+            (r) => r.label === attr.referential
+          );
+          if (rel && rel.type === "Subtype") {
+            return; // Skip inherited attributes
+          }
+        }
+
         const tsType = this.mapTypeToTS(attr.type, cls);
-        const nullable = !attr.is_identifier && attr.referential ? " | null" : "";
-        code += `  private ${attr.name}: ${tsType}${nullable};\n`;
+        const nullable =
+          !attr.is_identifier && attr.referential ? " | null" : "";
+        code += `  public ${attr.name}: ${tsType}${nullable};\n`;
       });
     }
 
     // Navigation properties
     const navProps = this.getNavigationProperties(cls.key_letter);
     navProps.forEach((prop) => {
-      code += `  private ${prop.name}: ${prop.type};\n`;
+      code += `  public ${prop.name}: ${prop.type};\n`;
     });
 
     if (code) code += "\n";
@@ -243,15 +249,37 @@ export class TypeScriptTranslator {
       });
     }
 
-    // Own params
+    // Own params - separate required and optional
+    const requiredParams = [];
+    const optionalParams = [];
+
     if (cls.attributes) {
       cls.attributes.forEach((attr) => {
+        // Skip referential attributes that point to supertype
+        if (superclass && attr.referential) {
+          const rel = Array.from(this.relationships.values()).find(
+            (r) => r.label === attr.referential
+          );
+          if (rel && rel.type === "Subtype") {
+            return; // Skip inherited attributes
+          }
+        }
+
         const tsType = this.mapTypeToTS(attr.type, cls);
         // Make non-identifier referential attributes optional
-        const optional = !attr.is_identifier && attr.referential ? "?" : "";
-        params.push(`${attr.name}${optional}: ${tsType}`);
+        const isOptional = !attr.is_identifier && attr.referential;
+
+        if (isOptional) {
+          optionalParams.push(`${attr.name}?: ${tsType}`);
+        } else {
+          requiredParams.push(`${attr.name}: ${tsType}`);
+        }
       });
     }
+
+    // Add required params first, then optional params
+    params.push(...requiredParams);
+    params.push(...optionalParams);
 
     code += params.join(", ");
     code += ") {\n";
@@ -262,9 +290,19 @@ export class TypeScriptTranslator {
       code += `    super(${superParams});\n`;
     }
 
-    // Initialize own attributes
+    // Initialize own attributes (skip referential to supertype)
     if (cls.attributes) {
       cls.attributes.forEach((attr) => {
+        // Skip referential attributes that point to supertype
+        if (superclass && attr.referential) {
+          const rel = Array.from(this.relationships.values()).find(
+            (r) => r.label === attr.referential
+          );
+          if (rel && rel.type === "Subtype") {
+            return; // Skip inherited attributes
+          }
+        }
+
         if (!attr.is_identifier && attr.referential) {
           code += `    this.${attr.name} = ${attr.name} || null;\n`;
         } else {
@@ -287,10 +325,31 @@ export class TypeScriptTranslator {
   generateGetters(cls) {
     let code = "";
 
+    // Find superclass
+    const superRel = Array.from(this.relationships.values()).find(
+      (r) =>
+        r.type === "Subtype" &&
+        r.subclasses?.some((sub) => sub.key_letter === cls.key_letter)
+    );
+    const superclass = superRel
+      ? this.classes.get(superRel.superclass?.key_letter)
+      : null;
+
     if (cls.attributes) {
       cls.attributes.forEach((attr) => {
+        // Skip referential attributes that point to supertype (getter inherited)
+        if (superclass && attr.referential) {
+          const rel = Array.from(this.relationships.values()).find(
+            (r) => r.label === attr.referential
+          );
+          if (rel && rel.type === "Subtype") {
+            return; // Skip inherited getter
+          }
+        }
+
         const tsType = this.mapTypeToTS(attr.type, cls);
-        const nullable = !attr.is_identifier && attr.referential ? " | null" : "";
+        const nullable =
+          !attr.is_identifier && attr.referential ? " | null" : "";
         const methodName = `get${this.capitalize(attr.name)}`;
         code += `  ${methodName}(): ${tsType}${nullable} {\n`;
         code += `    return this.${attr.name};\n`;
@@ -304,10 +363,30 @@ export class TypeScriptTranslator {
   generateSetters(cls) {
     let code = "";
 
+    // Find superclass
+    const superRel = Array.from(this.relationships.values()).find(
+      (r) =>
+        r.type === "Subtype" &&
+        r.subclasses?.some((sub) => sub.key_letter === cls.key_letter)
+    );
+    const superclass = superRel
+      ? this.classes.get(superRel.superclass?.key_letter)
+      : null;
+
     if (cls.attributes) {
       cls.attributes.forEach((attr) => {
         // Skip identifiers
         if (attr.is_identifier) return;
+
+        // Skip referential attributes that point to supertype (setter inherited)
+        if (superclass && attr.referential) {
+          const rel = Array.from(this.relationships.values()).find(
+            (r) => r.label === attr.referential
+          );
+          if (rel && rel.type === "Subtype") {
+            return; // Skip inherited setter
+          }
+        }
 
         const tsType = this.mapTypeToTS(attr.type, cls);
         const methodName = `set${this.capitalize(attr.name)}`;
@@ -333,6 +412,8 @@ export class TypeScriptTranslator {
         code += this.generateCompositionAggregationNavigation(cls, rel);
       } else if (rel.type === "Reflexive") {
         code += this.generateReflexiveNavigation(cls, rel);
+      } else if (rel.type === "Subtype") {
+        code += this.generateSubtypeNavigation(cls, rel);
       }
     });
 
@@ -352,7 +433,8 @@ export class TypeScriptTranslator {
     const mult = isOneSide ? rel.other_side?.mult : rel.one_side?.mult;
     const isMany = mult === "Many";
 
-    const propName = this.toCamelCase(targetClass.name) + (isMany ? "List" : "");
+    const propName =
+      this.toCamelCase(targetClass.name) + (isMany ? "List" : "");
     const returnType = isMany
       ? `${targetClass.name}[]`
       : `${targetClass.name} | null`;
@@ -375,7 +457,9 @@ export class TypeScriptTranslator {
       code += `    }\n`;
       code += `  }\n\n`;
     } else {
-      code += `  set${this.capitalize(propName)}(item: ${targetClass.name} | null): void {\n`;
+      code += `  set${this.capitalize(propName)}(item: ${
+        targetClass.name
+      } | null): void {\n`;
       code += `    this.${propName} = item;\n`;
       code += `  }\n\n`;
     }
@@ -420,22 +504,30 @@ export class TypeScriptTranslator {
 
       if (oneSideClass) {
         const propName = this.toCamelCase(oneSideClass.name);
-        code += `  get${this.capitalize(propName)}(): ${oneSideClass.name} | null {\n`;
+        code += `  get${this.capitalize(propName)}(): ${
+          oneSideClass.name
+        } | null {\n`;
         code += `    return this.${propName};\n`;
         code += `  }\n\n`;
 
-        code += `  set${this.capitalize(propName)}(item: ${oneSideClass.name}): void {\n`;
+        code += `  set${this.capitalize(propName)}(item: ${
+          oneSideClass.name
+        }): void {\n`;
         code += `    this.${propName} = item;\n`;
         code += `  }\n\n`;
       }
 
       if (otherSideClass) {
         const propName = this.toCamelCase(otherSideClass.name);
-        code += `  get${this.capitalize(propName)}(): ${otherSideClass.name} | null {\n`;
+        code += `  get${this.capitalize(propName)}(): ${
+          otherSideClass.name
+        } | null {\n`;
         code += `    return this.${propName};\n`;
         code += `  }\n\n`;
 
-        code += `  set${this.capitalize(propName)}(item: ${otherSideClass.name}): void {\n`;
+        code += `  set${this.capitalize(propName)}(item: ${
+          otherSideClass.name
+        }): void {\n`;
         code += `    this.${propName} = item;\n`;
         code += `  }\n\n`;
       }
@@ -449,7 +541,10 @@ export class TypeScriptTranslator {
     let code = this.generateSimpleNavigation(cls, rel);
 
     // Add delete method for Composition owner
-    if (rel.type === "Composition" && rel.one_side?.key_letter === cls.key_letter) {
+    if (
+      rel.type === "Composition" &&
+      rel.one_side?.key_letter === cls.key_letter
+    ) {
       const targetClass = this.classes.get(rel.other_side?.key_letter);
       if (targetClass) {
         code += `  delete(): void {\n`;
@@ -494,19 +589,51 @@ export class TypeScriptTranslator {
       code += `    return this.${propName};\n`;
       code += `  }\n\n`;
 
-      code += `  add${this.capitalize(otherSideRole.slice(0, -1) || "Item")}(item: ${cls.name}): void {\n`;
+      code += `  add${this.capitalize(
+        otherSideRole.slice(0, -1) || "Item"
+      )}(item: ${cls.name}): void {\n`;
       code += `    if (this.${propName}.indexOf(item) === -1) {\n`;
       code += `      this.${propName}.push(item);\n`;
       code += `    }\n`;
       code += `  }\n\n`;
 
-      code += `  remove${this.capitalize(otherSideRole.slice(0, -1) || "Item")}(item: ${cls.name}): void {\n`;
+      code += `  remove${this.capitalize(
+        otherSideRole.slice(0, -1) || "Item"
+      )}(item: ${cls.name}): void {\n`;
       code += `    const index = this.${propName}.indexOf(item);\n`;
       code += `    if (index > -1) {\n`;
       code += `      this.${propName}.splice(index, 1);\n`;
       code += `    }\n`;
       code += `  }\n\n`;
     }
+
+    return code;
+  }
+
+  generateSubtypeNavigation(cls, rel) {
+    let code = "";
+
+    // Only generate for subtype classes (navigating to supertype)
+    if (!rel.subclasses?.some((sub) => sub.key_letter === cls.key_letter)) {
+      return code;
+    }
+
+    const superClass = this.classes.get(rel.superclass?.key_letter);
+    if (!superClass) return code;
+
+    const propName = this.toCamelCase(superClass.name);
+
+    code += `  get${this.capitalize(propName)}(): ${
+      superClass.name
+    } | null {\n`;
+    code += `    return this.${propName};\n`;
+    code += `  }\n\n`;
+
+    code += `  set${this.capitalize(propName)}(item: ${
+      superClass.name
+    } | null): void {\n`;
+    code += `    this.${propName} = item;\n`;
+    code += `  }\n\n`;
 
     return code;
   }
@@ -537,6 +664,18 @@ export class TypeScriptTranslator {
       transitions.forEach((transition, idx) => {
         const condition = idx === 0 ? "if" : "else if";
         code += `    ${condition} (this.Current_State === "${transition.from_state}") {\n`;
+
+        // Find state action OAL and transform bridge calls
+        const state = cls.state_model.states.find(
+          (s) => s.name === transition.to_state
+        );
+        if (state && state.action_oal) {
+          const transformedOAL = this.transformOAL(state.action_oal);
+          if (transformedOAL) {
+            code += transformedOAL;
+          }
+        }
+
         code += `      this.Current_State = "${transition.to_state}";\n`;
         code += `    }`;
 
@@ -555,11 +694,27 @@ export class TypeScriptTranslator {
     return code;
   }
 
+  /**
+   * Transform OAL (Object Action Language) to TypeScript
+   * Validates and transforms bridge calls and BPAL97 features
+   */
+  transformOAL(oal) {
+    const oalTransformer = new OALTransformer(
+      this.externalEntities,
+      this.classes
+    );
+    return oalTransformer.transform(oal);
+  }
+
   getNavigationProperties(keyLetter) {
     const props = [];
 
     this.relationships.forEach((rel) => {
-      if (rel.type === "Simple" || rel.type === "Composition" || rel.type === "Aggregation") {
+      if (
+        rel.type === "Simple" ||
+        rel.type === "Composition" ||
+        rel.type === "Aggregation"
+      ) {
         if (rel.one_side?.key_letter === keyLetter) {
           const targetClass = this.classes.get(rel.other_side?.key_letter);
           if (targetClass) {
@@ -615,7 +770,10 @@ export class TypeScriptTranslator {
             });
           }
         }
-      } else if (rel.type === "Reflexive" && rel.one_side?.key_letter === keyLetter) {
+      } else if (
+        rel.type === "Reflexive" &&
+        rel.one_side?.key_letter === keyLetter
+      ) {
         const oneSideRole = rel.one_side?.role || "parent";
         const otherSideRole = rel.other_side?.role || "children";
         const oneSideMult = rel.one_side?.mult;
@@ -634,6 +792,17 @@ export class TypeScriptTranslator {
             type: `${this.classes.get(keyLetter).name}[]`,
           });
         }
+      } else if (rel.type === "Subtype") {
+        // For subtype: navigate to supertype (one-to-one)
+        if (rel.subclasses?.some((sub) => sub.key_letter === keyLetter)) {
+          const superClass = this.classes.get(rel.superclass?.key_letter);
+          if (superClass) {
+            props.push({
+              name: this.toCamelCase(superClass.name),
+              type: `${superClass.name} | null`,
+            });
+          }
+        }
       }
     });
 
@@ -650,6 +819,15 @@ export class TypeScriptTranslator {
         rel.association_class?.key_letter === keyLetter
       ) {
         rels.push(rel);
+      } else if (rel.type === "Subtype") {
+        // Check if this class is a subtype in this relationship
+        if (rel.subclasses?.some((sub) => sub.key_letter === keyLetter)) {
+          rels.push(rel);
+        }
+        // Check if this class is the superclass
+        if (rel.superclass?.key_letter === keyLetter) {
+          rels.push(rel);
+        }
       }
     });
 
@@ -674,28 +852,11 @@ export class TypeScriptTranslator {
   }
 
   mapTypeToTS(type, cls) {
-    // Handle state types
-    if (type?.startsWith("state<")) {
-      const kl = type.match(/state<(.+)>/)?.[1];
-      const stateClass = this.classes.get(kl);
-      return stateClass ? `${stateClass.name}State` : "string";
-    }
-
-    return this.mapCoreTypeToTS(type);
+    return this.typeMapper.mapToTS(type, cls);
   }
 
   mapCoreTypeToTS(type) {
-    const typeMap = {
-      unique_ID: "UniqueID",
-      string: "string",
-      integer: "number",
-      boolean: "boolean",
-      date: "Date",
-      real: "number",
-      void: "void",
-    };
-
-    return typeMap[type] || type || "any";
+    return this.typeMapper.mapCoreType(type);
   }
 
   capitalize(str) {
@@ -705,6 +866,16 @@ export class TypeScriptTranslator {
 
   toCamelCase(str) {
     if (!str) return "";
-    return str.charAt(0).toLowerCase() + str.slice(1);
+    // Remove spaces and capitalize first letter after space
+    // "ajukan Cuti" → "ajukanCuti"
+    return str
+      .split(" ")
+      .map((word, index) => {
+        if (index === 0) {
+          return word.charAt(0).toLowerCase() + word.slice(1);
+        }
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      })
+      .join("");
   }
 }

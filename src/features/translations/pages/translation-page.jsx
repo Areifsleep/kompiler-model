@@ -3,7 +3,13 @@ import { useNavigate } from "react-router";
 import { AlertCircle, Download, Copy, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,9 +47,9 @@ export default function TranslationPage() {
       // Menggunakan class utility yang diimport
       const translator = new TypeScriptTranslator(data);
       const code = translator.translate();
-      
+
       setTranslatedCode(code);
-      toast.success("Translasi berhasil!");
+      // Toast removed - success state ditampilkan lewat Alert component
     } catch (error) {
       console.error("Translation error:", error);
       setError(error.message || "Gagal melakukan translasi");
@@ -64,17 +70,17 @@ export default function TranslationPage() {
     const blob = new Blob([translatedCode], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    
+
     const systemName = modelData?.system_model?.system_name || "model";
     const filename = systemName.toLowerCase().replace(/\s+/g, "-");
-    
+
     a.href = url;
     a.download = `${filename}.ts`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
     toast.success("File berhasil diunduh!");
   };
 
@@ -93,7 +99,9 @@ export default function TranslationPage() {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               <div className="font-semibold mb-2">Tidak ada data model</div>
-              <p className="text-sm mb-4">Silakan parse JSON model terlebih dahulu.</p>
+              <p className="text-sm mb-4">
+                Silakan parse JSON model terlebih dahulu.
+              </p>
               <Button
                 variant="outline"
                 size="sm"
@@ -112,7 +120,6 @@ export default function TranslationPage() {
   return (
     <div className="container mx-auto p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        
         {/* Header Section */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2">TypeScript Code Generator</h1>
@@ -151,7 +158,8 @@ export default function TranslationPage() {
                 Berhasil men-translate{" "}
                 {modelData.system_model?.subsystems?.[0]?.classes?.length || 0}{" "}
                 class dan{" "}
-                {modelData.system_model?.subsystems?.[0]?.relationships?.length || 0}{" "}
+                {modelData.system_model?.subsystems?.[0]?.relationships
+                  ?.length || 0}{" "}
                 relationship
               </p>
             </AlertDescription>
