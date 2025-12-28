@@ -2,9 +2,15 @@ import { Link, Outlet, useLocation } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Home, FileJson, Eye, Code2 } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
+import { useLayoutEffect } from "react";
 
 export default function MainLayout() {
   const location = useLocation();
+
+  // Scroll to top if path changes
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   const navItems = [
     { path: "/", label: "Home", icon: Home },

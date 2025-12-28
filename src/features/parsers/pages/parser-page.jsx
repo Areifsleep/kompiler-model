@@ -1,11 +1,5 @@
 import { useState, useRef } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router";
@@ -16,10 +10,12 @@ import { useTheme } from "@/components/theme-provider";
 import { XtUMLParser, getLineContext } from "../utils/xtuml-validator";
 import ErrorDisplay from "../components/ErrorDisplay";
 import { exampleJSON } from "@/constants/example-json";
-import { toast } from "sonner";
+import { getEditorTheme } from "@/lib/get-editor-theme";
+import { useModel } from "@/contexts/ModelContext";
 
 export default function ParsingPage() {
   const navigate = useNavigate();
+  const { saveModel } = useModel();
   const [jsonInput, setJsonInput] = useState("");
   const [errors, setErrors] = useState([]);
   const [isValid, setIsValid] = useState(false);
@@ -62,6 +58,8 @@ export default function ParsingPage() {
     setIsParsing(true);
     setErrors([]);
     setIsValid(false);
+    // Clear model saat mulai parsing
+    saveModel(null, "");
 
     try {
       // Validasi JSON
@@ -85,10 +83,12 @@ export default function ParsingPage() {
       if (enhancedErrors.length > 0) {
         setErrors(enhancedErrors);
         setIsValid(false);
+        // Pastikan model tidak tersimpan jika ada error validasi
+        saveModel(null, "");
       } else {
         setIsValid(true);
-        // Simpan parsed data ke localStorage atau state management
-        localStorage.setItem("parsedModel", JSON.stringify(parsed));
+        // Simpan parsed data ke context HANYA jika validasi berhasil
+        saveModel(parsed, jsonInput);
       }
 
       // Auto scroll to results
@@ -100,10 +100,27 @@ export default function ParsingPage() {
       }, 100);
     } catch (error) {
       console.error("Parse Error:", error);
-      toast.error(
-        `Format JSON tidak valid dengan detail error: ${error.message}`
-      );
+      setErrors([
+        {
+          type: "JSON_PARSE_ERROR",
+          severity: "error",
+          message: "Format JSON tidak valid",
+          context: `${error.message}`,
+          suggestion: "Periksa kembali sintaks JSON Anda (kurung kurawal, koma, tanda kutip, dll)",
+          phase: "Parsing",
+        },
+      ]);
       setIsValid(false);
+      // Pastikan model tidak tersimpan jika JSON parse error
+      saveModel(null, "");
+
+      // Auto scroll to results untuk menampilkan error
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
     } finally {
       setIsParsing(false);
     }
@@ -115,22 +132,12 @@ export default function ParsingPage() {
 
   const { theme } = useTheme();
 
-  const editorTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? theme === "system"
-      ? "dark"
-      : theme
-    : theme === "system"
-    ? "light"
-    : theme;
-
   return (
     <div className="w-full p-6">
       <div className="w-full space-y-6">
         <div className="mb-6 max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold mb-2">JSON Parsing</h1>
-          <p className="text-muted-foreground">
-            Input model JSON Anda dan validasi strukturnya
-          </p>
+          <p className="text-muted-foreground">Input model JSON Anda dan validasi strukturnya</p>
         </div>
 
         <div className="w-full space-y-6 max-w-7xl mx-auto">
@@ -146,7 +153,7 @@ export default function ParsingPage() {
                 extensions={[json()]}
                 onChange={(value) => setJsonInput(value)}
                 placeholder="Masukkan JSON model..."
-                theme={editorTheme}
+                theme={getEditorTheme(theme)}
                 basicSetup={{
                   lineNumbers: true,
                   highlightActiveLineGutter: true,
@@ -191,12 +198,13 @@ export default function ParsingPage() {
             </CardContent>
           </Card>
 
-          <Card ref={resultRef} className="w-full">
+          <Card
+            ref={resultRef}
+            className="w-full"
+          >
             <CardHeader>
               <CardTitle>Hasil Validasi</CardTitle>
-              <CardDescription>
-                Status dan error dari proses parsing
-              </CardDescription>
+              <CardDescription>Status dan error dari proses parsing</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {errors.length > 0 && <ErrorDisplay errors={errors} />}
@@ -206,17 +214,15 @@ export default function ParsingPage() {
                   <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                     <AlertDescription className="text-green-800 dark:text-green-200">
-                      <div className="font-semibold mb-1">
-                        Validation Passed!
-                      </div>
-                      <p className="text-sm">
-                        Model berhasil diparse tanpa error dan siap untuk
-                        divisualisasikan.
-                      </p>
+                      <div className="font-semibold mb-1">Validation Passed!</div>
+                      <p className="text-sm">Model berhasil diparse tanpa error dan siap untuk divisualisasikan.</p>
                     </AlertDescription>
                   </Alert>
 
-                  <Button onClick={handleContinue} className="w-full">
+                  <Button
+                    onClick={handleContinue}
+                    className="w-full"
+                  >
                     Lanjut ke Visualisasi →
                   </Button>
                 </>
@@ -226,9 +232,7 @@ export default function ParsingPage() {
                 <div className="text-sm text-muted-foreground">
                   <p className="mb-4">Belum ada data yang diparse.</p>
                   <div className="space-y-2">
-                    <p className="font-semibold">
-                      Format JSON xtUML yang diharapkan:
-                    </p>
+                    <p className="font-semibold">Format JSON xtUML yang diharapkan:</p>
                     <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
                       {`{
   "system_model": {
