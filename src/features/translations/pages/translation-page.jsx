@@ -2,14 +2,17 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { AlertCircle, Download, Copy, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import CodeMirror from "@uiw/react-codemirror";
+import { javascript } from "@codemirror/lang-javascript";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Textarea } from "@/components/ui/textarea";
 
 // Asumsikan path ini benar berdasarkan snippet Anda
 import { TypeScriptTranslator } from "../utils/typescript-translator";
+import { useTheme } from "@/components/theme-provider";
+import { getEditorTheme } from "@/lib/get-editor-theme";
 
 export default function TranslationPage() {
   const navigate = useNavigate();
@@ -18,6 +21,8 @@ export default function TranslationPage() {
   const [copied, setCopied] = useState(false);
   const [translating, setTranslating] = useState(false);
   const [error, setError] = useState(null);
+
+  const { theme } = useTheme();
 
   useEffect(() => {
     const stored = localStorage.getItem("parsedModel");
@@ -41,9 +46,9 @@ export default function TranslationPage() {
       // Menggunakan class utility yang diimport
       const translator = new TypeScriptTranslator(data);
       const code = translator.translate();
-      
+
       setTranslatedCode(code);
-      toast.success("Translasi berhasil!");
+      // toast.success("Translasi berhasil!");
     } catch (error) {
       console.error("Translation error:", error);
       setError(error.message || "Gagal melakukan translasi");
@@ -64,17 +69,17 @@ export default function TranslationPage() {
     const blob = new Blob([translatedCode], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    
+
     const systemName = modelData?.system_model?.system_name || "model";
     const filename = systemName.toLowerCase().replace(/\s+/g, "-");
-    
+
     a.href = url;
     a.download = `${filename}.ts`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
     toast.success("File berhasil diunduh!");
   };
 
@@ -112,14 +117,10 @@ export default function TranslationPage() {
   return (
     <div className="container mx-auto p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        
         {/* Header Section */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2">TypeScript Code Generator</h1>
-          <p className="text-muted-foreground">
-            Generate TypeScript code dari model{" "}
-            {modelData.system_model?.system_name || "xtUML"}
-          </p>
+          <p className="text-muted-foreground">Generate TypeScript code dari model {modelData.system_model?.system_name || "xtUML"}</p>
         </div>
 
         {/* Error Alert */}
@@ -148,11 +149,8 @@ export default function TranslationPage() {
             <AlertDescription className="text-green-800 dark:text-green-200">
               <div className="font-semibold mb-1">Translation Success!</div>
               <p className="text-sm">
-                Berhasil men-translate{" "}
-                {modelData.system_model?.subsystems?.[0]?.classes?.length || 0}{" "}
-                class dan{" "}
-                {modelData.system_model?.subsystems?.[0]?.relationships?.length || 0}{" "}
-                relationship
+                Berhasil men-translate {modelData.system_model?.subsystems?.[0]?.classes?.length || 0} class dan{" "}
+                {modelData.system_model?.subsystems?.[0]?.relationships?.length || 0} relationship
               </p>
             </AlertDescription>
           </Alert>
@@ -162,15 +160,12 @@ export default function TranslationPage() {
         <Card>
           <CardHeader>
             <CardTitle>Generated TypeScript Code</CardTitle>
-            <CardDescription>
-              Clean TypeScript code tanpa contoh dan testing
-            </CardDescription>
+            <CardDescription>Clean TypeScript code tanpa contoh dan testing</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center">
               <p className="text-sm text-muted-foreground">
-                {translatedCode.split("\n").length} lines |{" "}
-                {(translatedCode.length / 1024).toFixed(2)} KB
+                {translatedCode.split("\n").length} lines | {(translatedCode.length / 1024).toFixed(2)} KB
               </p>
               <div className="flex gap-2">
                 <Button
@@ -179,11 +174,7 @@ export default function TranslationPage() {
                   onClick={handleCopy}
                   disabled={!translatedCode}
                 >
-                  {copied ? (
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                  ) : (
-                    <Copy className="h-4 w-4 mr-2" />
-                  )}
+                  {copied ? <CheckCircle2 className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
                   {copied ? "Copied!" : "Copy"}
                 </Button>
                 <Button
@@ -198,20 +189,29 @@ export default function TranslationPage() {
               </div>
             </div>
 
-            <Textarea
+            <CodeMirror
               value={translating ? "// Translating..." : translatedCode}
+              height="600px"
+              extensions={[javascript({ typescript: true })]}
               readOnly
-              className="min-h-125 font-mono text-sm"
+              theme={getEditorTheme(theme)}
+              className="border rounded-md overflow-hidden"
             />
           </CardContent>
         </Card>
 
         {/* Footer Navigation */}
         <div className="flex justify-between">
-          <Button variant="outline" onClick={() => navigate("/visualization")}>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/visualization")}
+          >
             ← Kembali ke Visualisasi
           </Button>
-          <Button variant="outline" onClick={() => navigate("/")}>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/")}
+          >
             Kembali ke Home
           </Button>
         </div>

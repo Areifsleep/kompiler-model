@@ -11,6 +11,7 @@ import { XtUMLParser, getLineContext } from "../utils/xtuml-validator";
 import ErrorDisplay from "../components/ErrorDisplay";
 import { exampleJSON } from "@/constants/example-json";
 import { toast } from "sonner";
+import { getEditorTheme } from "@/lib/get-editor-theme";
 
 export default function ParsingPage() {
   const navigate = useNavigate();
@@ -20,6 +21,8 @@ export default function ParsingPage() {
   const [isParsing, setIsParsing] = useState(false);
   const fileInputRef = useRef(null);
   const resultRef = useRef(null);
+
+  const { theme } = useTheme();
 
   const handleFileLoad = (event) => {
     const file = event.target.files?.[0];
@@ -102,16 +105,6 @@ export default function ParsingPage() {
     navigate("/visualization");
   };
 
-  const { theme } = useTheme();
-
-  const editorTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? theme === "system"
-      ? "dark"
-      : theme
-    : theme === "system"
-    ? "light"
-    : theme;
-
   return (
     <div className="w-full p-6">
       <div className="w-full space-y-6">
@@ -133,7 +126,7 @@ export default function ParsingPage() {
                 extensions={[json()]}
                 onChange={(value) => setJsonInput(value)}
                 placeholder="Masukkan JSON model..."
-                theme={editorTheme}
+                theme={getEditorTheme(theme)}
                 basicSetup={{
                   lineNumbers: true,
                   highlightActiveLineGutter: true,
