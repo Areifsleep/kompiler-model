@@ -207,6 +207,36 @@
               "phrase": "diambil oleh"
             },
             "association_class": { "key_letter": "KRS" }
+          },
+          {
+            "label": "R3",
+            "type": "Simple",
+            "description": "Mahasiswa memiliki log cuti",
+            "one_side": {
+              "key_letter": "MHS",
+              "mult": "One",
+              "phrase": "memiliki"
+            },
+            "other_side": {
+              "key_letter": "LGC",
+              "mult": "Many",
+              "phrase": "milik"
+            }
+          },
+          {
+            "label": "R4",
+            "type": "Simple",
+            "description": "Mahasiswa memiliki data wisuda",
+            "one_side": {
+              "key_letter": "MHS",
+              "mult": "One",
+              "phrase": "lulus di"
+            },
+            "other_side": {
+              "key_letter": "WSD",
+              "mult": "One",
+              "phrase": "untuk"
+            }
           }
         ]
       }

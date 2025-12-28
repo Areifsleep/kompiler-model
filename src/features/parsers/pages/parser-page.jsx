@@ -1,11 +1,5 @@
 import { useState, useRef } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router";
@@ -17,6 +11,7 @@ import { XtUMLParser, getLineContext } from "../utils/xtuml-validator";
 import ErrorDisplay from "../components/ErrorDisplay";
 import { exampleJSON } from "@/constants/example-json";
 import { toast } from "sonner";
+import { getEditorTheme } from "@/lib/get-editor-theme";
 
 export default function ParsingPage() {
   const navigate = useNavigate();
@@ -100,9 +95,7 @@ export default function ParsingPage() {
       }, 100);
     } catch (error) {
       console.error("Parse Error:", error);
-      toast.error(
-        `Format JSON tidak valid dengan detail error: ${error.message}`
-      );
+      toast.error(`Format JSON tidak valid dengan detail error: ${error.message}`);
       setIsValid(false);
     } finally {
       setIsParsing(false);
@@ -115,22 +108,12 @@ export default function ParsingPage() {
 
   const { theme } = useTheme();
 
-  const editorTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? theme === "system"
-      ? "dark"
-      : theme
-    : theme === "system"
-    ? "light"
-    : theme;
-
   return (
     <div className="w-full p-6">
       <div className="w-full space-y-6">
         <div className="mb-6 max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold mb-2">JSON Parsing</h1>
-          <p className="text-muted-foreground">
-            Input model JSON Anda dan validasi strukturnya
-          </p>
+          <p className="text-muted-foreground">Input model JSON Anda dan validasi strukturnya</p>
         </div>
 
         <div className="w-full space-y-6 max-w-7xl mx-auto">
@@ -146,7 +129,7 @@ export default function ParsingPage() {
                 extensions={[json()]}
                 onChange={(value) => setJsonInput(value)}
                 placeholder="Masukkan JSON model..."
-                theme={editorTheme}
+                theme={getEditorTheme(theme)}
                 basicSetup={{
                   lineNumbers: true,
                   highlightActiveLineGutter: true,
@@ -191,12 +174,13 @@ export default function ParsingPage() {
             </CardContent>
           </Card>
 
-          <Card ref={resultRef} className="w-full">
+          <Card
+            ref={resultRef}
+            className="w-full"
+          >
             <CardHeader>
               <CardTitle>Hasil Validasi</CardTitle>
-              <CardDescription>
-                Status dan error dari proses parsing
-              </CardDescription>
+              <CardDescription>Status dan error dari proses parsing</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {errors.length > 0 && <ErrorDisplay errors={errors} />}
@@ -206,17 +190,15 @@ export default function ParsingPage() {
                   <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                     <AlertDescription className="text-green-800 dark:text-green-200">
-                      <div className="font-semibold mb-1">
-                        Validation Passed!
-                      </div>
-                      <p className="text-sm">
-                        Model berhasil diparse tanpa error dan siap untuk
-                        divisualisasikan.
-                      </p>
+                      <div className="font-semibold mb-1">Validation Passed!</div>
+                      <p className="text-sm">Model berhasil diparse tanpa error dan siap untuk divisualisasikan.</p>
                     </AlertDescription>
                   </Alert>
 
-                  <Button onClick={handleContinue} className="w-full">
+                  <Button
+                    onClick={handleContinue}
+                    className="w-full"
+                  >
                     Lanjut ke Visualisasi →
                   </Button>
                 </>
@@ -226,9 +208,7 @@ export default function ParsingPage() {
                 <div className="text-sm text-muted-foreground">
                   <p className="mb-4">Belum ada data yang diparse.</p>
                   <div className="space-y-2">
-                    <p className="font-semibold">
-                      Format JSON xtUML yang diharapkan:
-                    </p>
+                    <p className="font-semibold">Format JSON xtUML yang diharapkan:</p>
                     <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
                       {`{
   "system_model": {

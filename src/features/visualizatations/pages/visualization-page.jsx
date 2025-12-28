@@ -3,116 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useNavigate } from "react-router";
 import { AlertCircle } from "lucide-react";
-import ReactFlow, {
-  MiniMap,
-  Controls,
-  Background,
-  useNodesState,
-  useEdgesState,
-  MarkerType,
-  Handle,
-  Position,
-} from "reactflow";
+import ReactFlow, { Controls, Background, useNodesState, useEdgesState, MarkerType } from "reactflow";
 import "reactflow/dist/style.css";
 
-// Custom Node Component for UML Class
-const ClassNode = ({ data }) => {
-  return (
-    <div
-      style={{
-        background: data.backgroundColor || "#ffffff",
-        border: `2px solid ${data.borderColor || "#3b82f6"}`,
-        borderRadius: "6px",
-        minWidth: "250px",
-        fontSize: "12px",
-        fontFamily: "system-ui, -apple-system, sans-serif",
-      }}
-    >
-      <Handle
-        type="target"
-        position={Position.Top}
-        style={{ background: "#555" }}
-      />
-
-      {/* Class Header */}
-      <div
-        style={{
-          padding: "10px 12px",
-          fontWeight: "bold",
-          fontSize: "14px",
-          borderBottom: "2px solid " + (data.borderColor || "#3b82f6"),
-          textAlign: "center",
-          background: data.headerBackground || "#f8fafc",
-        }}
-      >
-        {data.className}
-        <div
-          style={{
-            fontSize: "11px",
-            fontWeight: "normal",
-            color: "#64748b",
-            marginTop: "2px",
-          }}
-        >
-          ({data.keyLetter})
-        </div>
-      </div>
-
-      {/* Attributes Section */}
-      <div
-        style={{
-          padding: "8px 12px",
-          background: "#ffffff",
-        }}
-      >
-        {data.attributes && data.attributes.length > 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            {data.attributes.map((attr, i) => (
-              <div
-                key={i}
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: "11px",
-                  padding: "3px 6px",
-                  background: "#f8fafc",
-                  borderRadius: "3px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <span>{attr.name}</span>
-                <span style={{ color: "#64748b", fontSize: "10px" }}>
-                  {attr.type}
-                </span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div
-            style={{ color: "#94a3b8", fontSize: "10px", fontStyle: "italic" }}
-          >
-            No attributes
-          </div>
-        )}
-      </div>
-
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        style={{ background: "#555" }}
-      />
-    </div>
-  );
-};
-
-const nodeTypes = {
-  classNode: ClassNode,
-};
+import { nodeTypes } from "../components/class-node";
 
 export default function VisualizationPage() {
   const navigate = useNavigate();
   const [modelData, setModelData] = useState(null);
+
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
@@ -135,25 +34,14 @@ export default function VisualizationPage() {
       // Find supertype relationships
       const subtypeRels = relationships.filter((r) => r.type === "Subtype");
       const supertypeKeys = subtypeRels.map((r) => r.superclass.key_letter);
-      const subtypeKeys = subtypeRels.flatMap((r) =>
-        r.subclasses.map((s) => s.key_letter)
-      );
+      const subtypeKeys = subtypeRels.flatMap((r) => r.subclasses.map((s) => s.key_letter));
 
       // Separate classes by role
-      const superclasses = classes.filter((c) =>
-        supertypeKeys.includes(c.key_letter)
-      );
-      const subclasses = classes.filter((c) =>
-        subtypeKeys.includes(c.key_letter)
-      );
-      const associationClasses = classes.filter(
-        (c) => c.type === "Association"
-      );
+      const superclasses = classes.filter((c) => supertypeKeys.includes(c.key_letter));
+      const subclasses = classes.filter((c) => subtypeKeys.includes(c.key_letter));
+      const associationClasses = classes.filter((c) => c.type === "Association");
       const regularClasses = classes.filter(
-        (c) =>
-          !supertypeKeys.includes(c.key_letter) &&
-          !subtypeKeys.includes(c.key_letter) &&
-          c.type !== "Association"
+        (c) => !supertypeKeys.includes(c.key_letter) && !subtypeKeys.includes(c.key_letter) && c.type !== "Association"
       );
 
       // Render superclasses first (top level)
@@ -341,14 +229,8 @@ export default function VisualizationPage() {
           const otherSide = rel.other_side;
 
           if (oneSide && otherSide) {
-            const sourceKL =
-              oneSide.mult === "One"
-                ? oneSide.key_letter
-                : otherSide.key_letter;
-            const targetKL =
-              oneSide.mult === "Many"
-                ? oneSide.key_letter
-                : otherSide.key_letter;
+            const sourceKL = oneSide.mult === "One" ? oneSide.key_letter : otherSide.key_letter;
+            const targetKL = oneSide.mult === "Many" ? oneSide.key_letter : otherSide.key_letter;
 
             newEdges.push({
               id: `${sourceKL}-${targetKL}-${rel.label}`,
@@ -531,9 +413,7 @@ export default function VisualizationPage() {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               <div className="font-semibold mb-2">Tidak ada data model</div>
-              <p className="text-sm mb-4">
-                Silakan parse JSON model terlebih dahulu.
-              </p>
+              <p className="text-sm mb-4">Silakan parse JSON model terlebih dahulu.</p>
               <Button
                 variant="outline"
                 size="sm"
@@ -555,9 +435,7 @@ export default function VisualizationPage() {
     >
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Model Visualization</h1>
-        <p className="text-muted-foreground">
-          Visualisasi class diagram dan relationship model UML
-        </p>
+        <p className="text-muted-foreground">Visualisasi class diagram dan relationship model UML</p>
       </div>
 
       <div
@@ -573,6 +451,7 @@ export default function VisualizationPage() {
         <div
           style={{
             position: "absolute",
+            color: "#374151",
             top: "10px",
             left: "10px",
             zIndex: 10,
@@ -605,15 +484,11 @@ export default function VisualizationPage() {
               <span>Inheritance (R1)</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div
-                style={{ width: "30px", height: "2px", background: "#f59e0b" }}
-              ></div>
+              <div style={{ width: "30px", height: "2px", background: "#f59e0b" }}></div>
               <span>Associative M:N (R2)</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div
-                style={{ width: "30px", height: "2px", background: "#8b5cf6" }}
-              ></div>
+              <div style={{ width: "30px", height: "2px", background: "#8b5cf6" }}></div>
               <span>Simple 1:N (R3-R5)</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -638,9 +513,7 @@ export default function VisualizationPage() {
               <span>Aggregation (R7)</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div
-                style={{ width: "30px", height: "2px", background: "#ec4899" }}
-              ></div>
+              <div style={{ width: "30px", height: "2px", background: "#ec4899" }}></div>
               <span>Reflexive (R8)</span>
             </div>
           </div>
@@ -674,7 +547,10 @@ export default function VisualizationPage() {
       </div>
 
       <div className="flex justify-between mt-6">
-        <Button variant="outline" onClick={() => navigate("/parsing")}>
+        <Button
+          variant="outline"
+          onClick={() => navigate("/parsing")}
+        >
           ← Kembali ke Parsing
         </Button>
         <Button onClick={handleContinue}>Lanjut ke Translasi →</Button>
