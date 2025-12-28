@@ -1,0 +1,154 @@
+{
+  "system_model": {
+    "system_name": "Sistem Informasi Perpustakaan Digital",
+    "version": "1.0-lib-test",
+    "subsystems": [
+      {
+        "name": "Sirkulasi Buku",
+        "prefix": "LIB",
+        "data_types": [
+          { "name": "unique_ID", "core_type": "unique_ID" },
+          { "name": "judul_buku", "core_type": "string" },
+          { "name": "status_pinjam", "core_type": "string" },
+          { "name": "jumlah", "core_type": "integer" },
+          { "name": "tanggal", "core_type": "date" },
+          { "name": "state<PNJ>", "core_type": "string" }
+        ],
+        "external_entities": [
+          {
+            "name": "Logging",
+            "key_letter": "LOG",
+            "description": "System Logger",
+            "bridges": [
+              {
+                "name": "LogInfo",
+                "parameters": [{ "name": "message", "type": "string" }],
+                "return_type": "void"
+              }
+            ]
+          },
+          {
+            "name": "Timer",
+            "key_letter": "TIM",
+            "description": "Time Utility",
+            "bridges": [
+              {
+                "name": "current_time",
+                "parameters": [],
+                "return_type": "date"
+              },
+              {
+                "name": "get_days_diff",
+                "parameters": [
+                  { "name": "date1", "type": "date" },
+                  { "name": "date2", "type": "date" }
+                ],
+                "return_type": "integer"
+              }
+            ]
+          }
+        ],
+        "classes": [
+          {
+            "name": "Anggota",
+            "key_letter": "AGT",
+            "class_number": 1,
+            "attributes": [
+              {
+                "name": "Anggota_ID",
+                "type": "unique_ID",
+                "is_identifier": true
+              },
+              { "name": "Nama", "type": "string" },
+              { "name": "Email", "type": "string" },
+              { "name": "Total_Denda", "type": "integer" }
+            ]
+          },
+          {
+            "name": "Buku",
+            "key_letter": "BKU",
+            "class_number": 2,
+            "attributes": [
+              { "name": "Buku_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "Judul", "type": "string" },
+              { "name": "Stok", "type": "integer" }
+            ]
+          },
+          {
+            "name": "Peminjaman",
+            "key_letter": "PNJ",
+            "class_number": 3,
+            "type": "Association",
+            "attributes": [
+              {
+                "name": "Pinjam_ID",
+                "type": "unique_ID",
+                "is_identifier": true
+              },
+              { "name": "Current_State", "type": "state<PNJ>" },
+              {
+                "name": "Anggota_ID",
+                "type": "unique_ID",
+                "referential": "R10"
+              },
+              { "name": "Buku_ID", "type": "unique_ID", "referential": "R10" },
+              { "name": "Tgl_Pinjam", "type": "date" },
+              { "name": "Tgl_Harus_Kembali", "type": "date" },
+              { "name": "Status", "type": "status_pinjam" },
+              { "name": "Denda", "type": "integer" }
+            ],
+            "state_model": {
+              "lifecycle_type": "Instance",
+              "initial_state": "Dipinjam",
+              "states": [
+                {
+                  "name": "Dipinjam",
+                  "state_number": 1,
+                  "action_oal": "self.Current_State = \"Dipinjam\";\nself.Status = \"Dipinjam\";\nself.Denda = 0;\nself.Tgl_Pinjam = TIM::current_time();\nselect one buku related by self->BKU[R10];\nselect one agt related by self->AGT[R10];\nif (not_empty buku)\nLOG::LogInfo(message: \"Peminjaman Baru: \" + buku.Judul);\nend if;\nif (not_empty agt)\nLOG::LogInfo(message: \"Peminjam: \" + agt.Nama);\nend if;"
+                },
+                {
+                  "name": "Dikembalikan",
+                  "state_number": 2,
+                  "action_oal": "self.Current_State = \"Dikembalikan\";\nselisih = TIM::get_days_diff(date1: self.Tgl_Harus_Kembali, date2: param.tgl_kembali);\ndenda_per_hari = 1000;\ntotal_denda = 0;\nif (selisih > 0)\ntotal_denda = selisih * denda_per_hari;\nLOG::LogInfo(message: \"Terlambat \" + selisih + \" hari. Denda: \" + total_denda);\nelse\nLOG::LogInfo(message: \"Tepat waktu. Terima kasih.\");\nend if;\nself.Denda = total_denda;\nself.Status = \"Dikembalikan\";\nselect one agt related by self->AGT[R10];\nif (not_empty agt)\nagt.Total_Denda = agt.Total_Denda + total_denda;\nLOG::LogInfo(message: \"Total denda anggota diupdate: \" + agt.Total_Denda);\nend if;"
+                }
+              ],
+              "events": [
+                {
+                  "label": "PNJ1",
+                  "meaning": "Kembalikan Buku",
+                  "description": "Event pengembalian buku",
+                  "parameters": [{ "name": "tgl_kembali", "type": "date" }]
+                }
+              ],
+              "transitions": [
+                {
+                  "from_state": "Dipinjam",
+                  "event": "PNJ1",
+                  "to_state": "Dikembalikan"
+                }
+              ]
+            }
+          }
+        ],
+        "relationships": [
+          {
+            "label": "R10",
+            "type": "Associative",
+            "description": "Anggota meminjam Buku",
+            "one_side": {
+              "key_letter": "AGT",
+              "multiplicity": "1",
+              "phrase": "meminjam"
+            },
+            "other_side": {
+              "key_letter": "BKU",
+              "multiplicity": "*",
+              "phrase": "dipinjam oleh"
+            },
+            "association_class": { "key_letter": "PNJ" }
+          }
+        ]
+      }
+    ]
+  }
+}

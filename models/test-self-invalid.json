@@ -1,0 +1,61 @@
+{
+  "system_model": {
+    "system_name": "Test Self Invalid Usage",
+    "version": "1.0.0",
+    "subsystems": [
+      {
+        "name": "Test Subsystem",
+        "prefix": "TST",
+        "external_entities": [
+          {
+            "name": "Logging",
+            "key_letter": "LOG",
+            "bridges": [
+              {
+                "name": "LogInfo",
+                "parameters": [{ "name": "message", "type": "string" }],
+                "return_type": "void"
+              }
+            ]
+          }
+        ],
+        "classes": [
+          {
+            "name": "Person",
+            "key_letter": "PRS",
+            "class_number": 1,
+            "attributes": [
+              {
+                "name": "Person_ID",
+                "type": "unique_ID",
+                "is_identifier": true
+              },
+              { "name": "Name", "type": "string" },
+              { "name": "Current_State", "type": "state<PRS>" }
+            ],
+            "state_model": {
+              "lifecycle_type": "Instance",
+              "initial_state": "Active",
+              "states": [
+                {
+                  "name": "Active",
+                  "state_number": 1,
+                  "action_oal": "// Invalid self usage\n\n// ❌ ERROR: self without . or ->\nLOG::LogInfo(message: self);\n\n// ❌ ERROR: self followed by invalid character\nresult = self + \"test\";\n\n// ✅ VALID: proper usage\nself.Current_State = \"Active\";"
+                }
+              ],
+              "events": [
+                {
+                  "label": "PRS1",
+                  "meaning": "Activate",
+                  "parameters": []
+                }
+              ],
+              "transitions": []
+            }
+          }
+        ],
+        "relationships": []
+      }
+    ]
+  }
+}

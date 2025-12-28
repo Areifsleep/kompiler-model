@@ -8,29 +8,29 @@ const AUTHORS = {
     {
       teamName: "Kelompok 6 - Parsing",
       members: [
-        { name: "Anggota 1", role: "231060500" },
-        { name: "Anggota 2", role: "231060500" },
+        { name: "ARIF RAHMAN", role: "23106050050" },
+        { name: "ROZIN GUNAGRAHA", role: "23106050084" },
       ],
     },
     {
       teamName: "Kelompok 7 - Parsing",
       members: [
-        { name: "Anggota 3", role: "231060500" },
-        { name: "Anggota 4", role: "231060500" },
+        { name: "AHMAD ZIDNI HIDAYAT", role: "23106050077" },
+        { name: "SYAFIQ RUSTIAWANTO", role: "23106050094" },
       ],
     },
     {
       teamName: "Kelompok 9 - Visualization",
       members: [
-        { name: "Anggota 5", role: "231060500" },
-        { name: "Anggota 6", role: "231060500" },
+        { name: "MUHAMMAD FAISAL RAMADHAN", role: "23106050061" },
+        { name: "DAMA AMISUDA", role: "23106050096" },
       ],
     },
     {
       teamName: "Kelompok 10 - Translation",
       members: [
-        { name: "Anggota 7", role: "231060500" },
-        { name: "Anggota 8", role: "231060500" },
+        { name: "IDHAN HAIDAR KURNIAWAN", role: "23106050054" },
+        { name: "HANIF UBAIDUR ROHMAN SYAH", role: "23106050081" },
       ],
     },
   ],
@@ -82,7 +82,7 @@ export default function Home() {
               <CardDescription>Generate kode program</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">Translasi model ke berbagai bahasa pemrograman</p>
+              <p className="text-sm text-muted-foreground">Translasi model ke bahasa pemrograman Typescript</p>
             </CardContent>
           </Card>
         </div>
@@ -95,7 +95,7 @@ export default function Home() {
             <ol className="list-decimal list-inside space-y-2 text-sm">
               <li>Input JSON model dan validasi struktur</li>
               <li>Visualisasi class diagram dan relationship</li>
-              <li>Pilih bahasa target untuk translasi kode</li>
+              <li>Translasi kode ke bahasa Typescript</li>
               <li>Download hasil translasi</li>
             </ol>
           </CardContent>

@@ -451,9 +451,75 @@ if (errors.length === 0) {
 
 ---
 
-## ⭐ Update Terbaru (Version 2.0)
+## ⭐ Update Terbaru (Version 3.0)
 
-### Rule Baru yang Ditambahkan:
+### Rule Baru yang Ditambahkan (December 2025):
+
+1. ✅ **Rule 20**: External Entity Definition & Bridge Validation
+2. ✅ **Rule 21**: TIM KeyLetter Reserved for Timer Entity
+
+### External Entities Implementation (Rule 20 & 21):
+
+#### **Rule 20: External Entities harus didefinisikan dengan KeyLetters dan Bridge operations**
+
+- External Entities divalidasi terhadap definisi JSON
+- Bridge calls (KEY::Method) divalidasi sintaks dan keberadaannya
+- Format: UPPERCASE KeyLetter diikuti `::` dan nama method
+- Divalidasi di: `semantic-validator.js`, `typescript-translator.js`
+
+**Contoh Valid:**
+
+```oal
+LOG::LogInfo(message: "Student activated");
+TIM::timer_start(microseconds: 5000000, event_inst: self);
+```
+
+**Contoh Error:**
+
+```
+Unknown External Entity: 'XYZ' (Rule 20 Shlaer-Mellor violation)
+Available External Entities: LOG, TIM
+```
+
+#### **Rule 21: TIM KeyLetter Reserved**
+
+- KeyLetter `TIM` reserved untuk Timer External Entity
+- Sudah diimplementasikan dengan bridge operations:
+  - `timer_start` - Start delayed event generation
+  - `timer_cancel` - Cancel running timer
+  - `timer_remaining_time` - Query timer status
+
+**JSON Definition:**
+
+```json
+{
+  "external_entities": [
+    {
+      "name": "Timer",
+      "key_letter": "TIM",
+      "bridges": [
+        {
+          "name": "timer_start",
+          "parameters": [
+            { "name": "microseconds", "type": "integer" },
+            { "name": "event_inst", "type": "event_instance" }
+          ],
+          "return_type": "integer"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Compiler Enhancements:
+
+- **Runtime Library Generation**: Auto-generates TypeScript implementations for External Entities
+- **OAL Transformation**: Converts `LOG::LogInfo(...)` to `LOG.LogInfo({...})`
+- **Type-Safe Bridge Calls**: Parameters validated against bridge definitions
+- **Modular Architecture**: Easy to add new External Entities
+
+### Previous Rules (Version 2.0):
 
 1. ✅ **Rule 2**: Unique subsystem names
 2. ✅ **Rule 11**: Domain type matching untuk referential attributes
@@ -465,20 +531,19 @@ if (errors.length === 0) {
 8. ✅ **Rule 29**: Event data consistency
 9. ✅ **Rule 38**: Current_State attribute & update validation
 
-### Total Rule Baru: **9 rules**
+### Total Rules Implemented: **20 rules**
 
 ---
 
 ## 📝 Rule yang Belum Diimplementasikan
 
-**54 rules** belum diimplementasikan, termasuk:
+**52 rules** belum diimplementasikan, termasuk:
 
 ### Tidak Applicable untuk JSON Model:
 
 - Object Communication Model (OCM)
 - Process Models (ADFD)
 - Access & Communication Models
-- TIMER object formalism
 
 ### Memerlukan Runtime Validation:
 
@@ -488,9 +553,8 @@ if (errors.length === 0) {
 
 ### Memerlukan Struktur Data Tambahan:
 
-- External entity details
 - Assigner state models
-- Timer events & operations
+- Advanced timer operations
 
 ---
 
@@ -498,10 +562,11 @@ if (errors.length === 0) {
 
 **Sumber Rule**: Shlaer-Mellor Object Oriented Analysis Rules  
 **Publikasi**: Software Engineering Notes, ACM Press, Volume 18, Number 1, January 1993  
-**File Rule**: `models/rule-xt-uml.txt`
+**File Rule**: `models/rule-xt-uml.txt`  
+**External Entities Guide**: `docs/EXTERNAL_ENTITIES_GUIDE.md`
 
 ---
 
-**Versi**: 2.0.0  
-**Tanggal Update**: 24 Desember 2025  
+**Versi**: 3.0.0  
+**Tanggal Update**: 28 Desember 2025  
 **Project**: Kompiler Model - XT-UML Parser

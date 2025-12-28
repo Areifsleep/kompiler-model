@@ -1,0 +1,60 @@
+{
+  "system_model": {
+    "system_name": "Test Self in Strings",
+    "version": "1.0.0",
+    "subsystems": [
+      {
+        "name": "Test Subsystem",
+        "prefix": "TST",
+        "data_types": [
+          { "name": "unique_ID", "core_type": "unique_ID" },
+          { "name": "state<Student>", "core_type": "string" }
+        ],
+        "external_entities": [
+          {
+            "name": "Logging",
+            "key_letter": "LOG",
+            "bridges": [
+              {
+                "name": "LogInfo",
+                "parameters": [{ "name": "message", "type": "string" }],
+                "return_type": "void"
+              }
+            ]
+          }
+        ],
+        "classes": [
+          {
+            "name": "Student",
+            "key_letter": "STD",
+            "class_number": 1,
+            "attributes": [
+              {
+                "name": "Student_ID",
+                "type": "unique_ID",
+                "is_identifier": true
+              },
+              { "name": "Name", "type": "string" },
+              { "name": "NIM", "type": "string" },
+              { "name": "Current_State", "type": "state<Student>" }
+            ],
+            "state_model": {
+              "lifecycle_type": "Instance",
+              "initial_state": "Active",
+              "states": [
+                {
+                  "name": "Active",
+                  "state_number": 1,
+                  "action_oal": "// Test: 'self' inside string should NOT trigger error\nself.Current_State = \"Active\";\nself.Name = \"John Doe\";\n\n// These should NOT error (self is in string):\nLOG::LogInfo(message: \"Student self is active\");\nLOG::LogInfo(message: \"Check self status\");\nLOG::LogInfo(message: \"The student's NIM is: \" + self.NIM);\nLOG::LogInfo(message: \"Student named: \" + self.Name + \" is now active\");\n\n// These SHOULD work fine (valid self usage):\nmy_nim = self.NIM;\nmy_name = self.Name;"
+                }
+              ],
+              "events": [],
+              "transitions": []
+            }
+          }
+        ],
+        "relationships": []
+      }
+    ]
+  }
+}

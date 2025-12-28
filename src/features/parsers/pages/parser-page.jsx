@@ -10,10 +10,12 @@ import { useTheme } from "@/components/theme-provider";
 import { XtUMLParser, getLineContext } from "../utils/xtuml-validator";
 import ErrorDisplay from "../components/ErrorDisplay";
 import { exampleJSON } from "@/constants/example-json";
-import { toast } from "sonner";
+import { getEditorTheme } from "@/lib/get-editor-theme";
+import { useModel } from "@/contexts/ModelContext";
 
 export default function ParsingPage() {
   const navigate = useNavigate();
+  const { saveModel } = useModel();
   const [jsonInput, setJsonInput] = useState("");
   const [errors, setErrors] = useState([]);
   const [isValid, setIsValid] = useState(false);
@@ -56,6 +58,8 @@ export default function ParsingPage() {
     setIsParsing(true);
     setErrors([]);
     setIsValid(false);
+    // Clear model saat mulai parsing
+    saveModel(null, "");
 
     try {
       // Validasi JSON
@@ -79,20 +83,44 @@ export default function ParsingPage() {
       if (enhancedErrors.length > 0) {
         setErrors(enhancedErrors);
         setIsValid(false);
+        // Pastikan model tidak tersimpan jika ada error validasi
+        saveModel(null, "");
       } else {
         setIsValid(true);
-        // Simpan parsed data ke localStorage atau state management
-        localStorage.setItem("parsedModel", JSON.stringify(parsed));
+        // Simpan parsed data ke context HANYA jika validasi berhasil
+        saveModel(parsed, jsonInput);
       }
 
       // Auto scroll to results
       setTimeout(() => {
-        resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        resultRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
       }, 100);
     } catch (error) {
       console.error("Parse Error:", error);
-      toast.error(`Format JSON tidak valid dengan detail error: ${error.message}`);
+      setErrors([
+        {
+          type: "JSON_PARSE_ERROR",
+          severity: "error",
+          message: "Format JSON tidak valid",
+          context: `${error.message}`,
+          suggestion: "Periksa kembali sintaks JSON Anda (kurung kurawal, koma, tanda kutip, dll)",
+          phase: "Parsing",
+        },
+      ]);
       setIsValid(false);
+      // Pastikan model tidak tersimpan jika JSON parse error
+      saveModel(null, "");
+
+      // Auto scroll to results untuk menampilkan error
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
     } finally {
       setIsParsing(false);
     }
@@ -103,14 +131,6 @@ export default function ParsingPage() {
   };
 
   const { theme } = useTheme();
-
-  const editorTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? theme === "system"
-      ? "dark"
-      : theme
-    : theme === "system"
-    ? "light"
-    : theme;
 
   return (
     <div className="w-full p-6">
@@ -133,7 +153,7 @@ export default function ParsingPage() {
                 extensions={[json()]}
                 onChange={(value) => setJsonInput(value)}
                 placeholder="Masukkan JSON model..."
-                theme={editorTheme}
+                theme={getEditorTheme(theme)}
                 basicSetup={{
                   lineNumbers: true,
                   highlightActiveLineGutter: true,

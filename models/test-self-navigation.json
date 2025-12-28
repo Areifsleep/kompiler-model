@@ -1,0 +1,84 @@
+{
+  "system_model": {
+    "system_name": "Test Self Navigation Fix",
+    "version": "1.0.0",
+    "subsystems": [
+      {
+        "name": "Test Subsystem",
+        "prefix": "TST",
+        "external_entities": [
+          {
+            "name": "Logging",
+            "key_letter": "LOG",
+            "bridges": [
+              {
+                "name": "LogInfo",
+                "parameters": [{ "name": "message", "type": "string" }],
+                "return_type": "void"
+              }
+            ]
+          }
+        ],
+        "classes": [
+          {
+            "name": "Person",
+            "key_letter": "PRS",
+            "class_number": 1,
+            "attributes": [
+              {
+                "name": "Person_ID",
+                "type": "unique_ID",
+                "is_identifier": true
+              },
+              { "name": "Name", "type": "string" },
+              { "name": "Email", "type": "string" }
+            ]
+          },
+          {
+            "name": "Student",
+            "key_letter": "STD",
+            "class_number": 2,
+            "attributes": [
+              {
+                "name": "Student_ID",
+                "type": "unique_ID",
+                "is_identifier": true
+              },
+              { "name": "Person_ID", "type": "unique_ID", "referential": "R1" },
+              { "name": "NIM", "type": "string" },
+              { "name": "Current_State", "type": "state<STD>" }
+            ],
+            "state_model": {
+              "lifecycle_type": "Instance",
+              "initial_state": "Active",
+              "states": [
+                {
+                  "name": "Active",
+                  "state_number": 1,
+                  "action_oal": "// Test valid self usage\n\n// 1. Attribute access (self.)\nself.Current_State = \"Active\";\nLOG::LogInfo(message: \"NIM: \" + self.NIM);\n\n// 2. Relationship navigation (self->)\nselect one person related by self->PRS[R1];\n\n// 3. Check person data\nif (not_empty person)\n  LOG::LogInfo(message: \"Name: \" + person.Name);\n  LOG::LogInfo(message: \"Email: \" + person.Email);\nend if;"
+                }
+              ],
+              "events": [
+                {
+                  "label": "STD1",
+                  "meaning": "Activate",
+                  "parameters": []
+                }
+              ],
+              "transitions": []
+            }
+          }
+        ],
+        "relationships": [
+          {
+            "label": "R1",
+            "type": "Subtype",
+            "description": "Person is supertype of Student",
+            "superclass": { "key_letter": "PRS" },
+            "subclasses": [{ "key_letter": "STD" }]
+          }
+        ]
+      }
+    ]
+  }
+}

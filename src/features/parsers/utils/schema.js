@@ -41,8 +41,8 @@ export const XTUML_SCHEMA = {
     },
   },
   attribute: {
-    required: ["name", "type", "is_identifier"],
-    optional: ["description", "default_value", "referential"],
+    required: ["name", "type"],
+    optional: ["description", "default_value", "referential", "is_identifier"],
     types: {
       name: "string",
       type: "string",
@@ -54,7 +54,14 @@ export const XTUML_SCHEMA = {
   },
   relationship: {
     required: ["label", "type"],
-    optional: ["description", "one_side", "other_side", "superclass", "subclasses", "association_class"],
+    optional: [
+      "description",
+      "one_side",
+      "other_side",
+      "superclass",
+      "subclasses",
+      "association_class",
+    ],
     types: {
       label: "string",
       type: "string",

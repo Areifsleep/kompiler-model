@@ -15,6 +15,58 @@
           { "name": "state<MHS>", "core_type": "string" },
           { "name": "state<DSN>", "core_type": "string" }
         ],
+        "external_entities": [
+          {
+            "name": "Logging",
+            "key_letter": "LOG",
+            "description": "External Entity for logging operations (Rule 20 Shlaer-Mellor)",
+            "bridges": [
+              {
+                "name": "LogInfo",
+                "description": "Log informational message",
+                "parameters": [{ "name": "message", "type": "string" }]
+              },
+              {
+                "name": "LogError",
+                "description": "Log error message",
+                "parameters": [{ "name": "message", "type": "string" }]
+              },
+              {
+                "name": "LogWarning",
+                "description": "Log warning message",
+                "parameters": [{ "name": "message", "type": "string" }]
+              }
+            ]
+          },
+          {
+            "name": "Timer",
+            "key_letter": "TIM",
+            "description": "External Entity for timer operations (Rule 21: TIM keyletter)",
+            "bridges": [
+              {
+                "name": "timer_start",
+                "description": "Start a timer that generates event after specified microseconds",
+                "parameters": [
+                  { "name": "microseconds", "type": "integer" },
+                  { "name": "event_inst", "type": "event_instance" }
+                ],
+                "return_type": "integer"
+              },
+              {
+                "name": "timer_cancel",
+                "description": "Cancel a running timer",
+                "parameters": [{ "name": "timer_id", "type": "integer" }],
+                "return_type": "boolean"
+              },
+              {
+                "name": "timer_remaining_time",
+                "description": "Get remaining time for a timer",
+                "parameters": [{ "name": "timer_id", "type": "integer" }],
+                "return_type": "integer"
+              }
+            ]
+          }
+        ],
         "classes": [
           {
             "name": "Person",
