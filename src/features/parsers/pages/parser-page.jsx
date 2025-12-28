@@ -58,6 +58,8 @@ export default function ParsingPage() {
     setIsParsing(true);
     setErrors([]);
     setIsValid(false);
+    // Clear model saat mulai parsing
+    saveModel(null, "");
 
     try {
       // Validasi JSON
@@ -81,9 +83,11 @@ export default function ParsingPage() {
       if (enhancedErrors.length > 0) {
         setErrors(enhancedErrors);
         setIsValid(false);
+        // Pastikan model tidak tersimpan jika ada error validasi
+        saveModel(null, "");
       } else {
         setIsValid(true);
-        // Simpan parsed data ke context
+        // Simpan parsed data ke context HANYA jika validasi berhasil
         saveModel(parsed, jsonInput);
       }
 
@@ -107,6 +111,8 @@ export default function ParsingPage() {
         },
       ]);
       setIsValid(false);
+      // Pastikan model tidak tersimpan jika JSON parse error
+      saveModel(null, "");
 
       // Auto scroll to results untuk menampilkan error
       setTimeout(() => {

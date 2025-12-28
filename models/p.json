@@ -1,0 +1,351 @@
+{
+  "system_model": {
+    "system_name": "Sistem Informasi Akademik - OAL Complete",
+    "version": "3.1.0-oal-unified",
+    "subsystems": [
+      {
+        "name": "Manajemen Akademik Terpadu",
+        "prefix": "MAT",
+        "data_types": [
+          { "name": "unique_ID", "core_type": "unique_ID" },
+          { "name": "nama_orang", "core_type": "string" },
+          { "name": "kode_mk", "core_type": "string" },
+          { "name": "sks_type", "core_type": "integer" },
+          { "name": "tanggal", "core_type": "date" },
+          { "name": "state<MHS>", "core_type": "string" },
+          { "name": "kode_dosen", "core_type": "string" },
+          { "name": "hari_type", "core_type": "string" },
+          { "name": "jam_type", "core_type": "time" },
+          { "name": "state<KLS>", "core_type": "string" }
+        ],
+        "external_entities": [
+          {
+            "name": "Logging",
+            "key_letter": "LOG",
+            "description": "External Entity for logging operations",
+            "bridges": [
+              {
+                "name": "LogInfo",
+                "description": "Log informational message",
+                "parameters": [{ "name": "message", "type": "string" }],
+                "return_type": "void"
+              },
+              {
+                "name": "LogError",
+                "description": "Log error message",
+                "parameters": [{ "name": "message", "type": "string" }],
+                "return_type": "void"
+              }
+            ]
+          },
+          {
+            "name": "Timer",
+            "key_letter": "TIM",
+            "description": "External Entity for timer operations",
+            "bridges": [
+              {
+                "name": "current_time",
+                "description": "Get current timestamp",
+                "parameters": [],
+                "return_type": "date"
+              },
+              {
+                "name": "timer_start",
+                "description": "Start a timer",
+                "parameters": [
+                  { "name": "microseconds", "type": "integer" },
+                  { "name": "event_inst", "type": "inst_ref<Event>" }
+                ],
+                "return_type": "integer"
+              }
+            ]
+          },
+          {
+            "name": "Notification",
+            "key_letter": "NOTIF",
+            "description": "External Entity for notification service",
+            "bridges": [
+              {
+                "name": "SendEmail",
+                "description": "Send email notification",
+                "parameters": [
+                  { "name": "to", "type": "string" },
+                  { "name": "subject", "type": "string" },
+                  { "name": "body", "type": "string" }
+                ],
+                "return_type": "boolean"
+              }
+            ]
+          }
+        ],
+        "classes": [
+          {
+            "name": "Person",
+            "key_letter": "PRS",
+            "class_number": 1,
+            "attributes": [
+              { "name": "Person_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "Nama", "type": "string" },
+              { "name": "Email", "type": "string" }
+            ]
+          },
+          {
+            "name": "Mahasiswa",
+            "key_letter": "MHS",
+            "class_number": 2,
+            "attributes": [
+              { "name": "MHS_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "Person_ID", "type": "unique_ID", "referential": "R1" },
+              { "name": "NIM", "type": "string", "is_identifier": true },
+              { "name": "Current_State", "type": "state<MHS>" },
+              { "name": "Total_SKS", "type": "integer" },
+              { "name": "IPK", "type": "real" }
+            ],
+            "state_model": {
+              "lifecycle_type": "Instance",
+              "initial_state": "Aktif",
+              "states": [
+                {
+                  "name": "Aktif",
+                  "state_number": 1,
+                  "action_oal": "self.Current_State = \"Aktif\";\nself.Total_SKS = 0;\nLOG::LogInfo(message: \"Mahasiswa baru aktif dengan NIM: \" + self.NIM);\nselect one person related by self->PRS[R1];\nif (not_empty person)\n  LOG::LogInfo(message: \"Nama: \" + person.Nama);\nend if;"
+                },
+                {
+                  "name": "Cuti",
+                  "state_number": 2,
+                  "action_oal": "create object instance log_cuti of LogCuti;\nlog_cuti.MHS_ID = self.MHS_ID;\nlog_cuti.Alasan = param.alasan;\nlog_cuti.Tanggal = TIM::current_time();\nselect one person related by self->PRS[R1];\nif (not_empty person)\n  LOG::LogInfo(message: \"Email notif ke: \" + person.Email);\nend if;\nself.Current_State = \"Cuti\";"
+                },
+                {
+                  "name": "Lulus",
+                  "state_number": 3,
+                  "action_oal": "create object instance wisuda of Wisuda;\nwisuda.MHS_ID = self.MHS_ID;\nwisuda.Tanggal = param.tanggalLulus;\nself.Current_State = \"Lulus\";\nLOG::LogInfo(message: \"Mahasiswa lulus!\");"
+                }
+              ],
+              "events": [
+                { "label": "MHS1", "meaning": "Ajukan Cuti", "parameters": [{ "name": "alasan", "type": "string" }] },
+                { "label": "MHS2", "meaning": "Aktifkan Kembali", "parameters": [{ "name": "tanggalAktif", "type": "date" }] },
+                { "label": "MHS3", "meaning": "Dinyatakan Lulus", "parameters": [{ "name": "tanggalLulus", "type": "date" }] }
+              ],
+              "transitions": [
+                { "from_state": "Aktif", "event": "MHS1", "to_state": "Cuti" },
+                { "from_state": "Cuti", "event": "MHS2", "to_state": "Aktif" },
+                { "from_state": "Aktif", "event": "MHS3", "to_state": "Lulus" }
+              ]
+            }
+          },
+          {
+            "name": "MataKuliah",
+            "key_letter": "MK",
+            "class_number": 3,
+            "attributes": [
+              { "name": "MK_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "Kode", "type": "string" },
+              { "name": "Nama", "type": "string" },
+              { "name": "SKS", "type": "integer" }
+            ]
+          },
+          {
+            "name": "KRS",
+            "key_letter": "KRS",
+            "class_number": 4,
+            "type": "Association",
+            "attributes": [
+              { "name": "KRS_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "MHS_ID", "type": "unique_ID", "referential": "R2" },
+              { "name": "MK_ID", "type": "unique_ID", "referential": "R2" },
+              { "name": "Semester", "type": "integer" },
+              { "name": "Nilai", "type": "string" },
+              { "name": "Status", "type": "string" },
+              { "name": "SKS", "type": "integer" }
+            ]
+          },
+          {
+            "name": "LogCuti",
+            "key_letter": "LGC",
+            "class_number": 5,
+            "attributes": [
+              { "name": "Log_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "MHS_ID", "type": "unique_ID" },
+              { "name": "Alasan", "type": "string" },
+              { "name": "Tanggal", "type": "date" }
+            ]
+          },
+          {
+            "name": "Wisuda",
+            "key_letter": "WSD",
+            "class_number": 6,
+            "attributes": [
+              { "name": "Wisuda_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "MHS_ID", "type": "unique_ID" },
+              { "name": "Tanggal", "type": "date" },
+              { "name": "IPK", "type": "real" }
+            ]
+          },
+          {
+            "name": "Dosen",
+            "key_letter": "DSN",
+            "class_number": 7,
+            "attributes": [
+              { "name": "Dosen_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "Person_ID", "type": "unique_ID", "referential": "R5" },
+              { "name": "NIDN", "type": "string", "is_identifier": true },
+              { "name": "Jabatan", "type": "string" },
+              { "name": "Status", "type": "string" }
+            ]
+          },
+          {
+            "name": "Kelas",
+            "key_letter": "KLS",
+            "class_number": 8,
+            "attributes": [
+              { "name": "Kelas_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "MK_ID", "type": "unique_ID", "referential": "R6" },
+              { "name": "Dosen_ID", "type": "unique_ID", "referential": "R7" },
+              { "name": "Kode_Kelas", "type": "string" },
+              { "name": "Semester", "type": "integer" },
+              { "name": "Tahun_Ajaran", "type": "string" },
+              { "name": "Kapasitas", "type": "integer" },
+              { "name": "Jumlah_Peserta", "type": "integer" },
+              { "name": "Current_State", "type": "state<KLS>" }
+            ],
+            "state_model": {
+              "lifecycle_type": "Instance",
+              "initial_state": "Dibuka",
+              "states": [
+                {
+                  "name": "Dibuka",
+                  "state_number": 1,
+                  "action_oal": "self.Current_State = \"Dibuka\";\nself.Jumlah_Peserta = 0;\nselect one dosen related by self->DSN[R7];\nselect one person related by dosen->PRS[R5];\nif (not_empty person)\n  NOTIF::SendEmail(to: person.Email, subject: \"Kelas Baru\", body: \"Kelas \" + self.Kode_Kelas + \" telah dibuka\");\nend if;\nLOG::LogInfo(message: \"Kelas \" + self.Kode_Kelas + \" dibuka\");"
+                },
+                {
+                  "name": "Berlangsung",
+                  "state_number": 2,
+                  "action_oal": "self.Current_State = \"Berlangsung\";\n// Logic hitung peserta...\nLOG::LogInfo(message: \"Kelas berlangsung.\");"
+                },
+                {
+                  "name": "Selesai",
+                  "state_number": 3,
+                  "action_oal": "self.Current_State = \"Selesai\";\n// Logic selesai...\nLOG::LogInfo(message: \"Kelas selesai.\");"
+                }
+              ],
+              "events": [
+                { "label": "KLS1", "meaning": "Mulai Perkuliahan", "parameters": [] },
+                { "label": "KLS2", "meaning": "Selesaikan Kelas", "parameters": [] }
+              ],
+              "transitions": [
+                { "from_state": "Dibuka", "event": "KLS1", "to_state": "Berlangsung" },
+                { "from_state": "Berlangsung", "event": "KLS2", "to_state": "Selesai" }
+              ]
+            }
+          },
+          {
+            "name": "Jadwal",
+            "key_letter": "JDW",
+            "class_number": 9,
+            "attributes": [
+              { "name": "Jadwal_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "Kelas_ID", "type": "unique_ID", "referential": "R8" },
+              { "name": "Hari", "type": "string" },
+              { "name": "Jam_Mulai", "type": "time" },
+              { "name": "Jam_Selesai", "type": "time" },
+              { "name": "Ruangan", "type": "string" }
+            ]
+          },
+          {
+            "name": "Absensi",
+            "key_letter": "ABS",
+            "class_number": 10,
+            "attributes": [
+              { "name": "Absensi_ID", "type": "unique_ID", "is_identifier": true },
+              { "name": "Jadwal_ID", "type": "unique_ID", "referential": "R10" },
+              { "name": "MHS_ID", "type": "unique_ID", "referential": "R11" },
+              { "name": "Tanggal", "type": "date" },
+              { "name": "Status", "type": "string" },
+              { "name": "Keterangan", "type": "string" }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "label": "R1",
+            "type": "Subtype",
+            "description": "Person is supertype of Mahasiswa",
+            "superclass": { "key_letter": "PRS" },
+            "subclasses": [{ "key_letter": "MHS" }]
+          },
+          {
+            "label": "R2",
+            "type": "Associative",
+            "description": "Mahasiswa mengambil MataKuliah",
+            "one_side": { "key_letter": "MHS", "multiplicity": "1", "phrase": "mengambil" },
+            "other_side": { "key_letter": "MK", "multiplicity": "*", "phrase": "diambil oleh" },
+            "association_class": { "key_letter": "KRS" }
+          },
+          {
+            "label": "R3",
+            "type": "Simple",
+            "description": "Mahasiswa memiliki log cuti",
+            "one_side": { "key_letter": "MHS", "mult": "One", "phrase": "memiliki" },
+            "other_side": { "key_letter": "LGC", "mult": "Many", "phrase": "milik" }
+          },
+          {
+            "label": "R4",
+            "type": "Simple",
+            "description": "Mahasiswa memiliki data wisuda",
+            "one_side": { "key_letter": "MHS", "mult": "One", "phrase": "lulus di" },
+            "other_side": { "key_letter": "WSD", "mult": "One", "phrase": "untuk" }
+          },
+          {
+            "label": "R5",
+            "type": "Subtype",
+            "description": "Person is supertype of Dosen",
+            "superclass": { "key_letter": "PRS" },
+            "subclasses": [{ "key_letter": "DSN" }]
+          },
+          {
+            "label": "R6",
+            "type": "Simple",
+            "description": "MataKuliah memiliki Kelas",
+            "one_side": { "key_letter": "MK", "mult": "One", "phrase": "diajarkan di" },
+            "other_side": { "key_letter": "KLS", "mult": "Many", "phrase": "mengajarkan" }
+          },
+          {
+            "label": "R7",
+            "type": "Simple",
+            "description": "Dosen mengajar Kelas",
+            "one_side": { "key_letter": "DSN", "mult": "One", "phrase": "mengajar" },
+            "other_side": { "key_letter": "KLS", "mult": "Many", "phrase": "diajar oleh" }
+          },
+          {
+            "label": "R8",
+            "type": "Simple",
+            "description": "Kelas memiliki Jadwal",
+            "one_side": { "key_letter": "KLS", "mult": "One", "phrase": "memiliki" },
+            "other_side": { "key_letter": "JDW", "mult": "Many", "phrase": "untuk" }
+          },
+          {
+            "label": "R9",
+            "type": "Simple",
+            "description": "Jadwal diikuti oleh KRS",
+            "one_side": { "key_letter": "JDW", "mult": "One", "phrase": "diikuti oleh" },
+            "other_side": { "key_letter": "KRS", "mult": "Many", "phrase": "mengikuti" }
+          },
+          {
+            "label": "R10",
+            "type": "Simple",
+            "description": "Jadwal memiliki Absensi",
+            "one_side": { "key_letter": "JDW", "mult": "One", "phrase": "mencatat" },
+            "other_side": { "key_letter": "ABS", "mult": "Many", "phrase": "dicatat di" }
+          },
+          {
+            "label": "R11",
+            "type": "Simple",
+            "description": "Mahasiswa memiliki Absensi",
+            "one_side": { "key_letter": "MHS", "mult": "One", "phrase": "hadir di" },
+            "other_side": { "key_letter": "ABS", "mult": "Many", "phrase": "kehadiran" }
+          }
+        ]
+      }
+    ]
+  }
+}
