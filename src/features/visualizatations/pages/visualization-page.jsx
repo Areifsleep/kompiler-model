@@ -5,11 +5,13 @@ import { useNavigate } from "react-router";
 import { AlertCircle } from "lucide-react";
 import ReactFlow, { Controls, Background, useNodesState, useEdgesState, MarkerType } from "reactflow";
 import "reactflow/dist/style.css";
+import { useModel } from "@/contexts/ModelContext";
 
 import { nodeTypes } from "../components/class-node";
 
 export default function VisualizationPage() {
   const navigate = useNavigate();
+  const { parsedModel } = useModel();
   const [modelData, setModelData] = useState(null);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -389,17 +391,11 @@ export default function VisualizationPage() {
   );
 
   useEffect(() => {
-    const stored = localStorage.getItem("parsedModel");
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setModelData(parsed);
-        buildDiagram(parsed);
-      } catch (error) {
-        console.error("Error loading model data:", error);
-      }
+    if (parsedModel) {
+      setModelData(parsedModel);
+      buildDiagram(parsedModel);
     }
-  }, [buildDiagram]);
+  }, [parsedModel, buildDiagram]);
 
   const handleContinue = () => {
     navigate("/translation");

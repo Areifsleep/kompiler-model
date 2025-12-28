@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { AlertCircle, Download, Copy, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { useModel } from "@/contexts/ModelContext";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { javascript } from "@codemirror/lang-javascript";
 
 export default function TranslationPage() {
   const navigate = useNavigate();
+  const { parsedModel } = useModel();
   const [modelData, setModelData] = useState(null);
   const [translatedCode, setTranslatedCode] = useState("");
   const [copied, setCopied] = useState(false);
@@ -25,18 +27,11 @@ export default function TranslationPage() {
   const { theme } = useTheme();
 
   useEffect(() => {
-    const stored = localStorage.getItem("parsedModel");
-    if (stored) {
-      try {
-        const data = JSON.parse(stored);
-        setModelData(data);
-        translateModel(data);
-      } catch (error) {
-        console.error("Error loading model data:", error);
-        setError("Gagal memuat data model");
-      }
+    if (parsedModel) {
+      setModelData(parsedModel);
+      translateModel(parsedModel);
     }
-  }, []);
+  }, [parsedModel]);
 
   const translateModel = async (data) => {
     setTranslating(true);

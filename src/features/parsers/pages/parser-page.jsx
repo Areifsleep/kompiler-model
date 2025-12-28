@@ -11,9 +11,11 @@ import { XtUMLParser, getLineContext } from "../utils/xtuml-validator";
 import ErrorDisplay from "../components/ErrorDisplay";
 import { exampleJSON } from "@/constants/example-json";
 import { getEditorTheme } from "@/lib/get-editor-theme";
+import { useModel } from "@/contexts/ModelContext";
 
 export default function ParsingPage() {
   const navigate = useNavigate();
+  const { saveModel } = useModel();
   const [jsonInput, setJsonInput] = useState("");
   const [errors, setErrors] = useState([]);
   const [isValid, setIsValid] = useState(false);
@@ -81,8 +83,8 @@ export default function ParsingPage() {
         setIsValid(false);
       } else {
         setIsValid(true);
-        // Simpan parsed data ke localStorage atau state management
-        localStorage.setItem("parsedModel", JSON.stringify(parsed));
+        // Simpan parsed data ke context
+        saveModel(parsed, jsonInput);
       }
 
       // Auto scroll to results
