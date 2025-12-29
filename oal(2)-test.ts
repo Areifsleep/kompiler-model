@@ -1,6 +1,6 @@
 // Import dari file hasil generate Anda
 // Pastikan nama filenya sesuai (misal: LibrarySystem)
-import { Anggota, Buku, Peminjaman } from "../backup/output-lib.js";
+import { Anggota, Buku, Peminjaman } from "./backup/output-lib.js";
 
 // ==========================================
 // HELPER: Custom Assertion

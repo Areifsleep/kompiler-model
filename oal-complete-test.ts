@@ -1,6 +1,6 @@
 // Import semua class dari file hasil generate Anda
 // Asumsi nama file generate-nya adalah "SistemAkademik.ts"
-import { Mahasiswa, MataKuliah, KRS } from "../backup/output-oal-complete.js";
+import { Mahasiswa, MataKuliah, KRS } from "./backup/output-oal-complete.js";
 
 // ==========================================
 // HELPER: Fungsi Assert Sederhana (Pengganti Jest)

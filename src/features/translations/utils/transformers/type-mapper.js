@@ -6,9 +6,9 @@ export class TypeMapper {
   constructor(classes, dataTypes = []) {
     this.classes = classes;
     this.dataTypes = new Map();
-    
+
     // Build a map of domain types: name -> core_type
-    dataTypes.forEach(dt => {
+    dataTypes.forEach((dt) => {
       if (dt.name && dt.core_type) {
         this.dataTypes.set(dt.name, dt.core_type);
       }
@@ -65,7 +65,7 @@ export class TypeMapper {
     if (this.dataTypes.has(type)) {
       return type; // Return domain type name as-is (e.g., "unique_ID", "nama_orang")
     }
-    
+
     // Core type mappings (only for types NOT in dataTypes)
     const typeMap = {
       unique_ID: "unique_ID", // Default if not in dataTypes
@@ -75,6 +75,7 @@ export class TypeMapper {
       date: "Date",
       real: "number",
       void: "void",
+      timestamp: "number",
     };
 
     return typeMap[type] || type || "any";
